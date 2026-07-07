@@ -1,0 +1,2256 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B1A28">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Logbuch">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Logbuch des Kapitäns</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Alegreya+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     LOGBUCH DES KAPITÄNS · v0.1
+     Design-Token und Grundstile: unverändert aus Brücken-Mockup v2
+     (verbindliche Gestaltungsreferenz, Lastenheft Abschnitt 13)
+     ============================================================ */
+  :root{
+    --nacht:#0B1A28;         /* Fundament */
+    --tiefe:#122539;         /* Kartengrund */
+    --kante:#27415C;         /* Kartenkante */
+    --messing:#D9B87E;       /* Messing, aufgehellt */
+    --messing-tief:#A5834E;
+    --creme:#F5EEDC;         /* Schrift: hoher Kontrast */
+    --neben:#B9C6D2;         /* Sekundärtext */
+    --kurs:#8FBF9C;
+    --achtung:#E3B45C;
+    --serif:'Cormorant Garamond', Georgia, serif;
+    --sans:'Alegreya Sans', -apple-system, sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:var(--nacht);
+    color:var(--creme);
+    font-family:var(--sans);
+    font-weight:500;
+    font-size:18px;
+    line-height:1.5;
+    min-height:100vh;
+  }
+
+  /* ======= Messing-Bezel: der Rahmen des Instruments ======= */
+  .bezel{
+    max-width:440px;margin:14px auto;padding:3px;
+    border:1px solid var(--messing-tief);
+    outline:1px solid rgba(217,184,126,.28);
+    outline-offset:4px;
+    border-radius:18px;
+    background:
+      radial-gradient(ellipse 130% 50% at 50% -5%, rgba(217,184,126,.07), transparent 60%),
+      var(--nacht);
+  }
+  .schirm{padding:20px 18px 40px;position:relative;overflow:hidden}
+
+  /* Seekarten-Untergrund: feine Tiefenlinien */
+  .schirm::before{
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='440' height='300' viewBox='0 0 440 300'%3E%3Cg fill='none' stroke='%23D9B87E' stroke-width='0.6' opacity='0.10'%3E%3Cpath d='M-20 60 Q 90 30 200 62 T 460 55'/%3E%3Cpath d='M-20 130 Q 110 100 230 132 T 460 120'/%3E%3Cpath d='M-20 205 Q 100 175 220 208 T 460 195'/%3E%3Cpath d='M-20 275 Q 120 248 240 278 T 460 268'/%3E%3C/g%3E%3C/svg%3E");
+    background-size:440px 300px;background-repeat:repeat-y;
+  }
+  .schirm > *{position:relative}
+
+  /* ======= Kopf: Logbuch-Titelei ======= */
+  .titelei{text-align:center;padding:6px 0 14px;border-bottom:2px solid var(--messing-tief);position:relative;margin-bottom:4px}
+  .titelei::after{content:"";position:absolute;left:0;right:0;bottom:-5px;height:1px;background:rgba(217,184,126,.35)}
+  .werk{font-size:12px;font-weight:800;letter-spacing:.34em;color:var(--messing);text-transform:uppercase;margin-bottom:6px}
+  .deckname{font-family:var(--serif);font-weight:700;font-size:34px;line-height:1.05;color:var(--creme)}
+  .position{margin-top:7px;font-size:13.5px;font-weight:700;letter-spacing:.14em;color:var(--neben)}
+  .position b{color:var(--messing);font-weight:800}
+
+  /* ======= Wochenroute mit Kompassrose ======= */
+  .kartenfeld{
+    margin:18px 0 26px;padding:14px 12px 10px;
+    border:1px solid var(--kante);border-radius:12px;background:var(--tiefe);
+  }
+  .kartenfeld .kf-kopf{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 8px}
+  .kf-kopf span:first-child{font-size:12px;font-weight:800;letter-spacing:.22em;color:var(--messing);text-transform:uppercase}
+  .kf-kopf span:last-child{font-size:14px;font-weight:700;color:var(--kurs)}
+  .kartenfeld svg.route{width:100%;height:74px;display:block;overflow:visible}
+  .tage{display:flex;justify-content:space-between;padding:6px 6px 0}
+  .tage span{font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--neben);width:26px;text-align:center}
+  .tage span.heute{color:var(--nacht);background:var(--messing);border-radius:5px;padding:1px 0}
+
+  /* ======= Briefing als Logbucheintrag ======= */
+  .briefing{padding:6px 4px 24px;margin-bottom:8px}
+  .anrede{font-family:var(--serif);font-weight:700;font-size:30px;margin-bottom:10px}
+  .briefing p{font-size:18.5px;line-height:1.6;color:var(--creme)}
+
+  /* Wellen-Trenner */
+  .welle{height:16px;margin:2px 0 20px;background-repeat:repeat-x;background-position:center;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='14' viewBox='0 0 56 14'%3E%3Cpath d='M0 7 Q 7 1 14 7 T 28 7 T 42 7 T 56 7' fill='none' stroke='%23A5834E' stroke-width='1.3'/%3E%3C/svg%3E");
+    background-size:56px 14px;}
+
+  /* ======= Abschnittstitel ======= */
+  .titelzeile{display:flex;align-items:center;gap:10px;margin:0 0 14px}
+  .titelzeile svg{width:20px;height:20px;stroke:var(--messing);fill:none;stroke-width:1.6;flex:none}
+  .titelzeile h2{font-size:13.5px;font-weight:800;letter-spacing:.24em;text-transform:uppercase;color:var(--messing)}
+  .titelzeile .linie{flex:1;height:1px;background:linear-gradient(90deg, rgba(217,184,126,.45), transparent)}
+
+  /* ======= Hauptmission ======= */
+  .hauptmission{
+    position:relative;border-radius:14px;padding:22px 20px 18px;margin-bottom:14px;overflow:hidden;
+    background:linear-gradient(165deg,#17304A,#0F2236);
+    border:1px solid var(--messing-tief);
+    box-shadow:0 12px 32px rgba(0,0,0,.4), inset 0 1px 0 rgba(245,238,220,.07);
+  }
+  .hauptmission::before,.hauptmission::after{
+    content:"";position:absolute;width:26px;height:26px;border:1.6px solid var(--messing);opacity:.7}
+  .hauptmission::before{left:9px;top:9px;border-right:none;border-bottom:none;border-radius:6px 0 0 0}
+  .hauptmission::after{right:9px;bottom:9px;border-left:none;border-top:none;border-radius:0 0 6px 0}
+  .hm-label{display:flex;align-items:center;gap:9px;margin-bottom:12px;justify-content:center}
+  .hm-label svg{width:17px;height:17px;stroke:var(--messing);fill:none;stroke-width:1.6}
+  .hm-label span{font-size:12px;font-weight:800;letter-spacing:.26em;color:var(--messing);text-transform:uppercase}
+  .hm-titel{font-family:var(--serif);font-weight:700;font-size:29px;line-height:1.18;margin-bottom:12px;text-align:center}
+  .hm-schritt{text-align:center;color:var(--neben);font-size:16px;font-weight:500;margin-bottom:18px}
+  .hm-schritt b{color:var(--creme);font-weight:700}
+  .hm-fuss{display:flex;align-items:center;justify-content:space-between}
+  .status{display:inline-flex;align-items:center;gap:8px;font-size:14.5px;font-weight:700;color:var(--neben)}
+  .status .punkt{width:9px;height:9px;border-radius:50%;background:var(--achtung);box-shadow:0 0 9px rgba(227,180,92,.55)}
+  .status .punkt.gruen{background:var(--kurs);box-shadow:0 0 9px rgba(143,191,156,.55)}
+  .knopf{font-family:var(--sans);font-weight:800;font-size:15px;letter-spacing:.04em;
+    color:#22160a;background:linear-gradient(180deg,#E7C98C,#BE9A60);
+    border:1px solid #8a6c3c;border-radius:10px;padding:11px 20px}
+  .knopf svg{width:15px;height:15px;stroke:#22160a;fill:none;stroke-width:2;vertical-align:-2px;margin-right:5px}
+
+  /* ======= Begleitmissionen ======= */
+  .karte{display:flex;align-items:center;gap:14px;background:var(--tiefe);
+    border:1px solid var(--kante);border-radius:12px;padding:15px 16px;margin-bottom:10px}
+  .karte .ikon{flex:none;width:40px;height:40px;border:1.4px solid rgba(217,184,126,.55);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;background:rgba(217,184,126,.06)}
+  .karte .ikon svg{width:19px;height:19px;stroke:var(--messing);fill:none;stroke-width:1.6}
+  .karte .text{flex:1;min-width:0}
+  .karte .m-titel{font-size:17.5px;font-weight:700;color:var(--creme)}
+  .karte .m-schritt{font-size:14.5px;font-weight:500;color:var(--neben);margin-top:2px}
+  .karte .haken{flex:none;width:28px;height:28px;border:1.6px solid rgba(217,184,126,.6);border-radius:50%;margin-left:auto}
+  .karte.erledigt{opacity:.6}
+  .karte.erledigt .m-titel{text-decoration:line-through;text-decoration-color:rgba(217,184,126,.7)}
+  .karte.erledigt .haken{background:var(--kurs);border-color:var(--kurs);position:relative}
+  .karte.erledigt .haken::after{content:"";position:absolute;left:9px;top:5px;width:6px;height:12px;
+    border:solid var(--nacht);border-width:0 2.4px 2.4px 0;transform:rotate(42deg)}
+
+  /* ======= Routinen ======= */
+  .routinen{display:flex;gap:10px;flex-wrap:wrap}
+  .routine{display:flex;align-items:center;gap:9px;border:1.4px solid var(--kante);background:var(--tiefe);
+    border-radius:99px;padding:10px 17px;font-size:15.5px;font-weight:700;color:var(--creme);font-family:var(--sans)}
+  .routine .ring{width:17px;height:17px;border:1.6px solid rgba(217,184,126,.65);border-radius:50%}
+  .routine.erledigt{border-color:rgba(143,191,156,.5);color:var(--neben)}
+  .routine.erledigt .ring{background:var(--kurs);border-color:var(--kurs)}
+
+  /* ======= Termine ======= */
+  .termin{display:flex;gap:16px;align-items:center;padding:14px 6px;border-bottom:1px dashed rgba(217,184,126,.3)}
+  .termin:last-child{border-bottom:none}
+  .t-zeit{flex:none;width:62px;font-family:var(--serif);font-weight:700;font-size:22px;color:var(--messing)}
+  .t-titel{font-size:17.5px;font-weight:700;color:var(--creme)}
+  .t-ort{font-size:14.5px;font-weight:500;color:var(--neben)}
+  .termin.naechster{background:rgba(217,184,126,.1);border:1px solid rgba(217,184,126,.35);
+    border-radius:10px;padding:14px 14px;margin:0 -4px 4px}
+
+  .abschnitt{margin-bottom:28px}
+  .fussnote{margin-top:30px;text-align:center;font-family:var(--serif);font-weight:600;font-style:italic;
+    font-size:17px;color:var(--messing)}
+
+  @media (prefers-reduced-motion:no-preference){
+    .schirm > section:not([hidden]) > *{animation:auftauchen .5s ease both}
+    .schirm > section:not([hidden]) > *:nth-child(2){animation-delay:.06s}
+    .schirm > section:not([hidden]) > *:nth-child(3){animation-delay:.12s}
+    .schirm > section:not([hidden]) > *:nth-child(4){animation-delay:.18s}
+    .schirm > section:not([hidden]) > *:nth-child(5){animation-delay:.24s}
+    .schirm > section:not([hidden]) > *:nth-child(6){animation-delay:.3s}
+    .schirm > section:not([hidden]) > *:nth-child(7){animation-delay:.36s}
+    @keyframes auftauchen{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  }
+
+  /* ============================================================
+     V0.1-ERGÄNZUNGEN — gleiche Formensprache, gleiche Token
+     ============================================================ */
+  [hidden]{display:none !important}
+  button{cursor:pointer;font-family:var(--sans)}
+  input,select{font-family:var(--sans)}
+
+  /* Knopf-Varianten */
+  .knopf-linie{font-weight:800;font-size:15px;letter-spacing:.04em;color:var(--messing);
+    background:transparent;border:1.4px solid var(--messing-tief);border-radius:10px;padding:11px 20px}
+  .knopf-still{background:none;border:none;color:var(--neben);font-weight:700;font-size:14.5px;
+    letter-spacing:.04em;text-decoration:underline;text-decoration-color:rgba(217,184,126,.4);
+    text-underline-offset:3px;padding:6px 2px}
+  .knopf-breit{display:block;width:100%;text-align:center;margin-top:12px}
+  .mini-knopf{background:rgba(217,184,126,.07);border:1px solid var(--kante);border-radius:8px;
+    color:var(--neben);font-size:13px;font-weight:700;padding:6px 10px;flex:none}
+  .mini-knopf.aktiv{border-color:var(--messing);color:var(--messing)}
+
+  /* Brückenfuß: dezenter Zugang zum Kartenraum (Entscheidung Punkt 3) */
+  .brueckenfuss{margin-top:26px;text-align:center}
+
+  /* Kursangebot bei ausgefallenem Ritual */
+  .kursangebot{border:1px dashed rgba(217,184,126,.5);border-radius:12px;background:rgba(217,184,126,.05);
+    padding:16px;margin:0 0 24px}
+  .kursangebot p{font-size:16.5px;color:var(--creme);margin-bottom:12px}
+  .kursangebot .fussleiste{text-align:center;margin-top:6px}
+
+  /* Kartenraum-Kopf mit Fortschrittspunkten */
+  .kr-kopf{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0 14px;
+    border-bottom:2px solid var(--messing-tief);margin-bottom:20px}
+  .kr-kopf .kr-titel{font-size:12px;font-weight:800;letter-spacing:.3em;color:var(--messing);text-transform:uppercase}
+  .punkte{display:flex;gap:8px}
+  .punkte .p{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--messing);opacity:.9}
+  .punkte .p.voll{background:var(--messing)}
+  .kr-frage{font-family:var(--serif);font-weight:700;font-size:27px;line-height:1.2;margin:4px 0 8px;text-align:center}
+  .kr-hinweis{font-size:15px;font-weight:500;color:var(--neben);text-align:center;margin:0 0 18px}
+  .kr-fuss{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:24px}
+  .leer-hinweis{font-family:var(--serif);font-style:italic;font-size:17px;color:var(--neben);
+    text-align:center;padding:10px 0}
+
+  /* Rückblick: zwei große Tasten pro Karte (Entscheidung Punkt 5) */
+  .rk-karte{background:var(--tiefe);border:1px solid var(--kante);border-radius:12px;
+    padding:15px 16px;margin-bottom:12px}
+  .rk-karte.haupt{background:linear-gradient(165deg,#17304A,#0F2236);border-color:var(--messing-tief)}
+  .rk-titel{font-size:17.5px;font-weight:700;color:var(--creme)}
+  .rk-art{font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--messing);margin-bottom:4px}
+  .aktionspaar{display:flex;gap:8px;margin-top:12px}
+  .aktionspaar button{flex:1;padding:12px 6px;border-radius:10px;font-weight:800;font-size:14.5px;
+    background:transparent;border:1.4px solid var(--kante);color:var(--neben)}
+  .aktionspaar button.gewaehlt.a-erledigt{color:#122519;background:linear-gradient(180deg,#A9CDB4,#7FA98C);border-color:#5d7f68}
+  .aktionspaar button.gewaehlt.a-vorrat{color:var(--messing);border-color:var(--messing-tief);background:rgba(217,184,126,.08)}
+
+  /* Eingabefelder */
+  .eingabefeld{width:100%;background:var(--tiefe);border:1.4px solid var(--kante);border-radius:12px;
+    color:var(--creme);font-weight:500;font-size:17px;padding:14px 16px;outline:none}
+  .eingabefeld:focus{border-color:var(--messing-tief)}
+  .eingabefeld::placeholder{color:rgba(185,198,210,.55)}
+  .hinweis{min-height:24px;font-size:14px;font-weight:500;color:var(--kurs);margin:8px 2px 2px;
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .hinweis.warnung{color:var(--achtung)}
+
+  /* Bereichswahl: sechs Symbole, ein Tipp (Lastenheft Abschnitt 4, Schritt 2) */
+  .bereich-wahl{display:flex;gap:6px;justify-content:space-between;margin:12px 0 4px}
+  .bereich-wahl button{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
+    background:transparent;border:none;padding:6px 0;color:var(--neben)}
+  .bereich-wahl .bw-ring{width:42px;height:42px;border:1.4px solid var(--kante);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;background:var(--tiefe)}
+  .bereich-wahl svg{width:19px;height:19px;stroke:var(--neben);fill:none;stroke-width:1.6}
+  .bereich-wahl .bw-name{font-size:10.5px;font-weight:700;letter-spacing:.03em}
+  .bereich-wahl button.gewaehlt{color:var(--messing)}
+  .bereich-wahl button.gewaehlt .bw-ring{border-color:var(--messing);background:rgba(217,184,126,.1)}
+  .bereich-wahl button.gewaehlt svg{stroke:var(--messing)}
+
+  /* Vorratsliste, gruppiert nach Horizonten */
+  .vorrat-gruppe{margin-top:20px}
+  .vorrat-gruppe h3{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;
+    letter-spacing:.2em;text-transform:uppercase;color:var(--messing);margin-bottom:8px}
+  .vorrat-gruppe h3 .linie{flex:1;height:1px;background:linear-gradient(90deg,rgba(217,184,126,.35),transparent)}
+  .vorrat-item{display:flex;align-items:center;gap:10px;background:var(--tiefe);border:1px solid var(--kante);
+    border-radius:10px;padding:11px 12px;margin-bottom:8px}
+  .vorrat-item svg.vi-ikon{width:16px;height:16px;stroke:var(--messing);fill:none;stroke-width:1.6;flex:none;opacity:.85}
+  .vorrat-item .vi-text{flex:1;min-width:0}
+  .vorrat-item .vi-titel{font-size:16px;font-weight:700;color:var(--creme)}
+  .vorrat-item .vi-meta{font-size:13px;font-weight:500;color:var(--neben);margin-top:1px}
+
+  /* Wahl-Listen (Schritt 3 und Kursangebot) */
+  .wahl{width:100%;text-align:left;display:flex;align-items:center;gap:12px;background:var(--tiefe);
+    border:1.4px solid var(--kante);border-radius:12px;padding:14px;margin-bottom:9px;color:var(--creme)}
+  .wahl .w-text{flex:1;min-width:0}
+  .wahl .w-titel{font-size:16.5px;font-weight:700}
+  .wahl .w-meta{font-size:13.5px;font-weight:500;color:var(--neben);margin-top:1px}
+  .wahl .w-meta b{color:var(--achtung);font-weight:700}
+  .wahl .w-ring{flex:none;width:22px;height:22px;border:1.6px solid rgba(217,184,126,.6);border-radius:50%}
+  .wahl.gewaehlt{border-color:var(--messing);background:rgba(217,184,126,.08)}
+  .wahl.gewaehlt .w-ring{background:var(--messing);border-color:var(--messing)}
+
+  /* Formzeilen (Routinen / Termine) */
+  .formzeile{margin-bottom:14px}
+  .formzeile label{display:block;font-size:12px;font-weight:800;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--messing);margin-bottom:7px}
+  .tag-wahl{display:flex;gap:6px;flex-wrap:wrap}
+  .tag-wahl button{flex:1;min-width:40px;padding:9px 4px;border-radius:8px;border:1.4px solid var(--kante);
+    background:var(--tiefe);color:var(--neben);font-weight:800;font-size:13px;letter-spacing:.04em}
+  .tag-wahl button.gewaehlt{border-color:var(--messing);color:var(--messing);background:rgba(217,184,126,.1)}
+  .verwaltung-zeile{display:flex;align-items:center;gap:10px;background:var(--tiefe);border:1px solid var(--kante);
+    border-radius:10px;padding:12px;margin-bottom:8px}
+  .verwaltung-zeile .vz-text{flex:1;min-width:0}
+  .verwaltung-zeile .vz-titel{font-size:16px;font-weight:700}
+  .verwaltung-zeile .vz-meta{font-size:13px;font-weight:500;color:var(--neben);margin-top:1px}
+  .verwaltung-zeile.pausiert{opacity:.55}
+  .rb-text{font-size:16px;color:var(--neben);margin-bottom:6px;line-height:1.55}
+
+  /* Ausguck: Blick sieben Tage voraus — nur Tage mit Terminen */
+  .ausguck-tag{font-size:12.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--neben);margin:16px 2px 2px}
+  .ausguck-tag b{color:var(--messing);font-weight:800}
+
+  /* Deck-Wechsel: Tipp auf den Decknamen (Lastenheft 3) */
+  button.deckname{background:none;border:none;color:var(--creme);display:inline-flex;align-items:center;
+    justify-content:center;gap:9px;font-family:var(--serif);font-weight:700;font-size:34px;line-height:1.05;padding:0}
+  button.deckname svg{width:17px;height:17px;stroke:var(--messing-tief);fill:none;stroke-width:1.8;opacity:.9;flex:none}
+
+  /* Funkverbindung zum Google-Kalender (nur Privatdeck) */
+  .funkstand{margin-top:8px;font-size:13px;font-weight:500;color:var(--neben);opacity:.85;
+    font-style:italic;font-family:var(--serif)}
+  .funk-block{margin-top:30px;border-top:1px dashed rgba(217,184,126,.3);padding-top:20px}
+
+  /* Installiert auf dem Home-Bildschirm: Platz für die iOS-Statusleiste */
+  @media (display-mode: standalone){ body{padding-top:env(safe-area-inset-top)} }
+
+  /* Overlays: Tafel (Import) und Flagge (Belohnung) */
+  .overlay{position:fixed;inset:0;background:rgba(6,13,21,.82);display:flex;align-items:center;
+    justify-content:center;padding:20px;z-index:50}
+  .tafel{max-width:400px;width:100%;background:var(--tiefe);border:1px solid var(--messing-tief);
+    border-radius:14px;padding:22px 20px}
+  .tafel h3{font-family:var(--serif);font-size:25px;font-weight:700;margin-bottom:10px}
+  .tafel p{font-size:15.5px;font-weight:500;color:var(--neben);margin-bottom:16px;line-height:1.55}
+
+  #flagge-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(6,13,21,.74);z-index:60}
+  .flagge-buehne{text-align:center}
+  .flagge-buehne svg{width:130px;height:170px;overflow:visible}
+  .flagge-text{font-family:var(--serif);font-weight:700;font-size:27px;color:var(--creme);margin-top:8px}
+  .flagge-unter{font-family:var(--serif);font-style:italic;font-size:17px;color:var(--messing);margin-top:4px}
+  @media (prefers-reduced-motion:no-preference){
+    .flagge-buehne{animation:einblenden .35s ease both}
+    .flagge-buehne .f-tuch{animation:hissen 1.3s ease both .15s}
+    @keyframes hissen{from{transform:translateY(96px);opacity:0}45%{opacity:1}to{transform:translateY(0);opacity:1}}
+    @keyframes einblenden{from{opacity:0}to{opacity:1}}
+  }
+</style>
+</head>
+<body>
+<div class="bezel"><div class="schirm">
+
+  <!-- ================= ANSICHT: BRÜCKE (morgens, nur lesen und abhaken) ================= -->
+  <section id="ansicht-bruecke">
+    <header class="titelei">
+      <div class="werk">Logbuch des Kapitäns</div>
+      <button class="deckname" id="deck-wechsel" title="Deck wechseln"></button>
+      <div class="position" id="positionszeile"></div>
+    </header>
+
+    <div class="kartenfeld" id="wochenroute" aria-label="Wochenroute"></div>
+
+    <section class="briefing">
+      <div class="anrede" id="briefing-anrede"></div>
+      <p id="briefing-text"></p>
+    </section>
+    <div class="welle"></div>
+
+    <div id="kursangebot" class="kursangebot" hidden></div>
+
+    <section class="abschnitt" id="hm-bereich"></section>
+    <section class="abschnitt" id="bm-bereich"></section>
+    <section class="abschnitt" id="routinen-bereich"></section>
+    <section class="abschnitt" id="termine-bereich"></section>
+    <section class="abschnitt" id="ausguck-bereich"></section>
+
+    <div class="welle"></div>
+    <div class="fussnote">„Ich kenne meinen Kurs.“</div>
+    <div class="brueckenfuss"><button class="knopf-linie" id="btn-kartenraum">Kartenraum</button></div>
+  </section>
+
+  <!-- ================= ANSICHT: KARTENRAUM (geführtes Ritual, 3 Schritte) ================= -->
+  <section id="ansicht-kartenraum" hidden>
+    <div class="kr-kopf">
+      <span class="kr-titel">Kartenraum</span>
+      <div class="punkte" id="kr-punkte" aria-label="Fortschritt">
+        <span class="p"></span><span class="p"></span><span class="p"></span>
+      </div>
+      <button class="knopf-still" id="btn-kr-schliessen">Brücke</button>
+    </div>
+
+    <!-- Schritt 1: Rückblick -->
+    <div id="kr-schritt1"></div>
+
+    <!-- Schritt 2: Vorrat sichten -->
+    <div id="kr-schritt2" hidden>
+      <div class="kr-frage">Vorrat sichten</div>
+      <input id="vorrat-eingabe" class="eingabefeld" type="text"
+             placeholder="Neuer Eintrag … (z. B. „Zahnarzt Di 14:30“)" autocomplete="off">
+      <div class="hinweis" id="parse-hinweis"></div>
+      <div class="bereich-wahl" id="bereich-wahl"></div>
+      <button class="knopf knopf-breit" id="btn-eintrag-speichern" hidden></button>
+      <div id="vorrat-liste"></div>
+      <div class="kr-fuss">
+        <span>
+          <button class="knopf-still" id="btn-zu-routinen">Routinen</button>
+          <button class="knopf-still" id="btn-zu-terminen">Termine</button>
+          <button class="knopf-still" id="btn-zu-rettungsboot">Rettungsboot</button>
+        </span>
+        <button class="knopf" id="btn-s2-weiter">Weiter</button>
+      </div>
+    </div>
+
+    <!-- Schritt 3a: Hauptmission wählen -->
+    <div id="kr-schritt3a" hidden></div>
+    <!-- Schritt 3b: Begleitmissionen wählen -->
+    <div id="kr-schritt3b" hidden></div>
+    <!-- Abschluss -->
+    <div id="kr-abschluss" hidden></div>
+  </section>
+
+  <!-- ================= ANSICHT: BORDROUTINEN VERWALTEN ================= -->
+  <section id="ansicht-routinen" hidden>
+    <div class="kr-kopf">
+      <span class="kr-titel">Bordroutinen</span>
+      <button class="knopf-still" id="btn-r-zurueck">Zurück</button>
+    </div>
+    <div class="formzeile">
+      <label for="routine-titel">Neue Routine</label>
+      <input id="routine-titel" class="eingabefeld" type="text" placeholder="z. B. Sporteinheit" autocomplete="off">
+    </div>
+    <div class="formzeile">
+      <label>Rhythmus</label>
+      <div class="tag-wahl" id="rhythmus-wahl">
+        <button type="button" data-typ="taeglich">Täglich</button>
+        <button type="button" data-typ="wochentage">Wochentage</button>
+        <button type="button" data-typ="woechentlich">1× pro Woche</button>
+      </div>
+    </div>
+    <div class="formzeile" id="tage-zeile" hidden>
+      <label>Tage</label>
+      <div class="tag-wahl" id="tage-wahl"></div>
+    </div>
+    <div class="formzeile">
+      <button type="button" class="routine" id="vorschlag-schalter"><span class="ring"></span>Im Briefing vorschlagen</button>
+    </div>
+    <button class="knopf knopf-breit" id="btn-routine-anlegen">Routine anlegen</button>
+    <div id="routinen-liste" style="margin-top:24px"></div>
+  </section>
+
+  <!-- ================= ANSICHT: TERMINE VERWALTEN (v0.1: manuelle Quelle) ================= -->
+  <section id="ansicht-termine" hidden>
+    <div class="kr-kopf">
+      <span class="kr-titel">Termine</span>
+      <button class="knopf-still" id="btn-t-zurueck">Zurück</button>
+    </div>
+    <input id="termin-eingabe" class="eingabefeld" type="text"
+           placeholder="z. B. „Elternzeit-Café Sa 15:00“" autocomplete="off">
+    <div class="hinweis" id="termin-hinweis"></div>
+    <button class="knopf knopf-breit" id="btn-termin-speichern" hidden>Termin eintragen</button>
+    <div id="termine-liste" style="margin-top:20px"></div>
+    <div class="funk-block" id="funk-block" hidden>
+      <div class="formzeile">
+        <label for="funk-url">Funkverbindung · Google-Kalender</label>
+        <input id="funk-url" class="eingabefeld" type="url"
+               placeholder="https://script.google.com/…/exec" autocomplete="off">
+      </div>
+      <div class="aktionspaar">
+        <button class="gewaehlt a-erledigt" id="btn-funk-verbinden">Verbinden &amp; prüfen</button>
+        <button class="gewaehlt a-vorrat" id="btn-funk-trennen" hidden>Trennen</button>
+      </div>
+      <div class="hinweis" id="funk-status"></div>
+    </div>
+  </section>
+
+  <!-- ================= ANSICHT: RETTUNGSBOOT (Export / Import) ================= -->
+  <section id="ansicht-rettungsboot" hidden>
+    <div class="kr-kopf">
+      <span class="kr-titel">Rettungsboot</span>
+      <button class="knopf-still" id="btn-rb-zurueck">Zurück</button>
+    </div>
+    <p class="rb-text">Der Export sichert das gesamte Privatdeck — Vorrat, Routinen, Logbuch, Termine und
+      Einstellungen — in einer menschenlesbaren JSON-Datei. Aus ihr lässt sich alles vollständig wiederherstellen.</p>
+    <div id="export-knoepfe"></div>
+    <p class="rb-text" id="export-warnung" style="margin-top:10px" hidden>Achtung, Captain: Enthält eine
+      Sicherung das Arbeitsdeck, gehört die Datei in „Auf meinem iPhone“ — nicht in iCloud Drive oder
+      andere Cloud-Ordner. Dienstdaten bleiben auf dem Gerät.</p>
+    <div class="welle" style="margin-top:26px"></div>
+    <p class="rb-text">Wiederherstellung: eine Exportdatei einlesen. Vor dem Import zeigt das Logbuch
+      eine Zusammenfassung und fragt, ob ersetzt oder zusammengeführt werden soll.</p>
+    <input type="file" id="import-datei" accept=".json,application/json" hidden>
+    <button class="knopf-linie knopf-breit" id="btn-import">Exportdatei einlesen …</button>
+    <div class="hinweis" id="rb-status"></div>
+  </section>
+
+</div></div>
+
+<!-- Belohnung: Flagge nach erfüllter Hauptmission -->
+<div id="flagge-overlay" hidden>
+  <div class="flagge-buehne">
+    <svg viewBox="0 0 130 170" aria-hidden="true">
+      <line x1="34" y1="12" x2="34" y2="156" stroke="#A5834E" stroke-width="3"/>
+      <circle cx="34" cy="10" r="4" fill="#D9B87E"/>
+      <path d="M18 158 h32" stroke="#A5834E" stroke-width="3" stroke-linecap="round"/>
+      <g class="f-tuch">
+        <path d="M37 18 L112 28 L93 42 L112 56 L37 66 Z" fill="#D9B87E" stroke="#A5834E" stroke-width="1"/>
+      </g>
+    </svg>
+    <div class="flagge-text">Hauptmission erfüllt</div>
+    <div class="flagge-unter">Ein guter Tag, Captain.</div>
+  </div>
+</div>
+
+<!-- Import-Bestätigung -->
+<div id="import-overlay" class="overlay" hidden>
+  <div class="tafel">
+    <h3>Import prüfen</h3>
+    <p id="import-zusammenfassung"></p>
+    <div class="aktionspaar">
+      <button class="gewaehlt a-vorrat" id="btn-import-ersetzen">Ersetzen</button>
+      <button class="gewaehlt a-erledigt" id="btn-import-mergen">Zusammenführen</button>
+    </div>
+    <div style="text-align:center;margin-top:14px">
+      <button class="knopf-still" id="btn-import-abbrechen">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ============================================================
+   KONSTANTEN — Daten strikt vom Code getrennt
+   ============================================================ */
+const APP_VERSION = '0.2.0';
+const FORMAT_NAME = 'logbuch-des-kapitaens';
+const FORMAT_VERSION = 1;                        // additiv versioniert (Exportformat, Grundsatz 4)
+const SPEICHER_SCHLUESSEL = 'logbuch-des-kapitaens';
+const POSITION_KOORDINATEN = '47°40′N · 9°11′O'; // Zierde der Titelei (Heimathafen)
+
+const TAGE_KURZ = ['MO','DI','MI','DO','FR','SA','SO'];   // Woche: Montag–Sonntag (Entscheidung Punkt 2)
+const TAGE_LANG = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
+const MONATE = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+
+const BEREICHE = [
+  { id:'allgemein',  name:'Allgemein',  ikon:'anker'   },
+  { id:'arbeit',     name:'Arbeit',     ikon:'koffer'  },
+  { id:'familie',    name:'Familie',    ikon:'familie' },
+  { id:'zuhause',    name:'Zuhause',    ikon:'haus'    },
+  { id:'gesundheit', name:'Gesundheit', ikon:'herz'    },
+  { id:'projekte',   name:'Projekte',   ikon:'buch'    }
+];
+const HORIZONTE = [
+  { id:'heute', name:'Heute' },
+  { id:'woche', name:'Diese Woche' },
+  { id:'monat', name:'Diesen Monat' },
+  { id:'reise', name:'Langfristige Reise' }
+];
+
+/* SVG-Linien-Icons in Messington — keine Emojis im Produkt (Designverfassung) */
+const ICON = {
+  anker:   '<path d="M12 3a2.2 2.2 0 1 0 0 4.4A2.2 2.2 0 0 0 12 3zm0 4.4V21m0 0c-4.5 0-8-3-8.5-7M12 21c4.5 0 8-3 8.5-7M2.5 14l1 1.5L5 14m14 0l1 1.5 1-1.5M9 9.6h6"/>',
+  koffer:  '<rect x="4" y="8" width="16" height="12" rx="2"/><path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M4 13h16"/>',
+  familie: '<circle cx="9" cy="8" r="2.6"/><circle cx="16.5" cy="10" r="2"/><path d="M4.5 20c.4-3.4 2.3-5.2 4.5-5.2s4.1 1.8 4.5 5.2M13.8 20c.3-2.4 1.4-3.8 2.7-3.8s2.4 1.4 2.7 3.8"/>',
+  haus:    '<path d="M4 21V9l8-6 8 6v12h-5v-7h-6v7z"/>',
+  herz:    '<path d="M12 20s-7-4.6-9-9c-1.2-2.8.6-6 3.7-6 2 0 3.3 1 4.3 2.6C12 6 13.3 5 15.3 5c3.1 0 4.9 3.2 3.7 6-2 4.4-7 9-7 9z"/>',
+  buch:    '<path d="M4 5.5C6 4.3 8.5 4.3 12 6c3.5-1.7 6-1.7 8-.5V19c-2-1.2-4.5-1.2-8 .5-3.5-1.7-6-1.7-8-.5zM12 6v13.5"/>',
+  stern:   '<path d="M12 2l2.4 6.9H21l-5.7 4.2 2.2 6.9-5.5-4.2-5.5 4.2 2.2-6.9L3 8.9h6.6z"/>',
+  uhr:     '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>',
+  kalender:'<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/>',
+  wellen:  '<path d="M3 17c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 6 0M3 12c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 6 0"/>',
+  flagge:  '<path d="M6 21V4m0 1h11l-3 3.5 3 3.5H6"/>',
+  fernrohr:'<path d="M4 20l3.2-3.2M6.6 17.4l2.2-2.2 3.4 3.4-2.2 2.2zM10.3 13.7l4.6-4.6 3.4 3.4-4.6 4.6zM16.4 6.1l1.1-1.1a1.7 1.7 0 0 1 2.4 2.4l-1.1 1.1z"/>',
+  wechsel: '<path d="M7 4 3.5 7.5 7 11M3.5 7.5H16M17 13l3.5 3.5L17 20M20.5 16.5H8"/>'
+};
+function icon(name){ return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (ICON[name]||ICON.anker) + '</svg>'; }
+function bereichVon(id){ return BEREICHE.find(b => b.id === id) || BEREICHE[0]; }
+
+/* ============================================================
+   BRIEFING-KATALOG — 1:1 aus dem Begleitdokument, reine Daten.
+   Neue Varianten werden hier ergänzt, nie in der Logik.
+   ============================================================ */
+const KATALOG = {
+  begruessung: {
+    standard: [
+      'Guten Morgen, Captain.',
+      'Willkommen auf der Brücke, Captain.',
+      'Guten Morgen, Captain. Die Lage im Überblick:',
+      'Morgen, Captain. Hier der Blick auf den Tag:'
+    ],
+    montag: [
+      'Guten Morgen, Captain. Eine neue Woche liegt vor dem Bug.',
+      'Willkommen zurück auf der Brücke, Captain. Die Woche beginnt.'
+    ],
+    freitag: [
+      'Guten Morgen, Captain. Der letzte Schlag vor dem Wochenende.',
+      'Morgen, Captain. Freitag — Kurs auf den Hafen.'
+    ],
+    wochenende: [
+      'Guten Morgen, Captain. Wochenende — ruhige See.',
+      'Morgen, Captain. Heute bestimmt die Crew den Kurs.'
+    ]
+  },
+  ritualZusatz: ['Der Kurs von gestern Abend steht.'],
+  hauptmission: {
+    gesetzt: [
+      'Heute zählt vor allem eines: {m}.',
+      'Deine Hauptmission heute: {m}.',
+      'Der Tag ist ein Erfolg, wenn eines gelingt: {m}.',
+      'Im Mittelpunkt heute: {m}.',
+      'Ein Ziel vor allen anderen: {m}.'
+    ],
+    leer: [
+      'Noch ist kein Kurs gesetzt. Ein Tipp genügt, um die Hauptmission für heute zu wählen.',
+      'Die Karte für heute ist noch leer. Womit wird der Tag zum Erfolg?'
+    ]
+  },
+  termine: {
+    einer: [
+      'Ein Termin heute: {titel} um {zeit}.',
+      'Um {zeit} steht {titel} an — sonst ist der Tag frei von Terminen.'
+    ],
+    wenige: [
+      '{n} Termine heute, der nächste: {titel} um {zeit}.',
+      'Heute stehen {n} Termine an. Es beginnt um {zeit} mit {titel}.'
+    ],
+    viele: [
+      'Ein voller Tag: {n} Termine, beginnend um {zeit} mit {titel}.',
+      'Dichter Verkehr heute — {n} Termine. Der erste: {titel} um {zeit}.'
+    ],
+    keine: ['Keine Termine heute — freies Fahrwasser für die Hauptmission.']
+  },
+  wochenblick: {
+    frist: [
+      'Diese Woche im Blick: {a}, fällig am {tag}.',
+      '{a} steht bis {tag} an — noch genug Wasser unterm Kiel.',
+      'Am Horizont: {a} ({tag}).'
+    ],
+    fristHeute: [
+      'Heute fällig: {a}.',
+      '{a} läuft heute aus — sie ist Teil des Tagesbilds.'
+    ],
+    routine: [
+      '{r} würde heute gut in den Tagesablauf passen.',
+      'Heute wäre Gelegenheit für {r}.',
+      '{r} steht laut Rhythmus heute an.'
+    ]
+  },
+  abschluss: {
+    standard: [
+      'Gute Fahrt, Captain.',
+      'Der Kurs liegt an.',
+      'Ruhige Hand am Ruder — das genügt.',
+      'Ein Schritt nach dem anderen. Gute Fahrt.'
+    ],
+    serie: [
+      'Drei erfüllte Hauptmissionen in Folge — der Kurs stimmt.',
+      'Die Logbucheinträge der letzten Tage können sich sehen lassen.'
+    ],
+    montag: ['Die Woche gehört noch niemandem. Gute Fahrt.'],
+    freitagArbeit: ['Heute Abend wird die Wache übergeben. Bis dahin: gute Fahrt.'],
+    arbeitZusatz: ['Konzentrierter Tag voraus.', 'Die Prioritäten sind gesetzt.']
+  }
+};
+
+/* ============================================================
+   ZEIT-HELFER — lokale Zeitzone, ISO-Datumsstrings (JJJJ-MM-TT)
+   ============================================================ */
+function pad2(n){ return String(n).padStart(2, '0'); }
+function datumISO(d){ return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+function heuteISO(){ return datumISO(new Date()); }
+function parseISO(s){ const [j,m,t] = s.split('T')[0].split('-').map(Number); return new Date(j, m-1, t); }
+function addTage(iso, n){ const d = parseISO(iso); d.setDate(d.getDate()+n); return datumISO(d); }
+function wochentagIndex(iso){ return (parseISO(iso).getDay() + 6) % 7; }  // 0 = Montag
+function wochenstart(iso){ return addTage(iso, -wochentagIndex(iso)); }
+function deutschesDatum(iso){
+  const d = parseISO(iso);
+  return TAGE_LANG[wochentagIndex(iso)] + ', ' + d.getDate() + '. ' + MONATE[d.getMonth()] + ' ' + d.getFullYear();
+}
+function kurzDatum(iso){ const d = parseISO(iso); return TAGE_KURZ[wochentagIndex(iso)] + ' ' + d.getDate() + '.' + (d.getMonth()+1) + '.'; }
+function jetztZeit(){ const d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+function isoMitZone(){
+  const d = new Date(), off = -d.getTimezoneOffset(), vz = off >= 0 ? '+' : '-', a = Math.abs(off);
+  return datumISO(d) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds())
+       + vz + pad2(Math.floor(a/60)) + ':' + pad2(a%60);
+}
+function neueId(){
+  return (crypto && crypto.randomUUID) ? crypto.randomUUID()
+       : Date.now().toString(16) + '-' + Math.random().toString(16).slice(2);
+}
+
+/* ============================================================
+   SPEICHER — LocalStorage, Struktur = Rettungsboot-Format.
+   Von Anfang an zweideckfähig: decks.arbeit bleibt in v0.1 null.
+   ============================================================ */
+let zustand = null;
+
+function leeresDeck(name){
+  return {
+    settings: {
+      deckName: name || 'Privat',
+      ritual: { start: '20:30', ende: '23:00' },
+      kalender: { typ: 'manuell' },              // v0.1; später: 'google-apps-script' + scriptUrl
+      briefing: { wiederholungssperre: true }
+    },
+    vorrat: [],
+    routinen: [],
+    logbuch: [],
+    briefingStatus: { letzteVarianten: {}, selteneZusaetze: {}, heutigesBriefing: null },
+    termine: [],                                  // additives Feld (Freigabe Punkt 4)
+    kurs: null,                                   // additives Feld (Freigabe Punkt 4)
+    routinenHeute: { datum: heuteISO(), erledigt: [] },  // Routinen-Haken ohne gesetzten Kurs
+    kursAngebot: { abgelehntAm: null },           // „Kurs für heute noch setzen?“ nur 1× pro Tag
+    terminCache: { stand: null, letzterAbruf: 0, gestoert: false, termine: [] }  // Fremddatenkopie — nie im Rettungsboot
+  };
+}
+
+function ladeZustand(){
+  let roh = null;
+  try { roh = localStorage.getItem(SPEICHER_SCHLUESSEL); } catch(e){ /* Speicher gesperrt */ }
+  if (roh){
+    try {
+      zustand = JSON.parse(roh);
+    } catch(e){
+      // Defekte Daten nie stillschweigend überschreiben: Kopie sichern, dann frisch starten.
+      try { localStorage.setItem(SPEICHER_SCHLUESSEL + '-defekt', roh); } catch(e2){}
+      zustand = null;
+    }
+  }
+  if (!zustand || !zustand.decks){
+    zustand = { formatVersion: FORMAT_VERSION, decks: { privat: leeresDeck(), arbeit: null } };
+  }
+  zustand.decks.privat = vervollstaendigeDeck(zustand.decks.privat);
+  if (!('arbeit' in zustand.decks)) zustand.decks.arbeit = null;
+  if (zustand.decks.arbeit) zustand.decks.arbeit = vervollstaendigeDeck(zustand.decks.arbeit);
+  if (zustand.aktivesDeck !== 'arbeit' || !zustand.decks.arbeit) zustand.aktivesDeck = 'privat';
+}
+
+/* Additive Migration: fehlende Felder mit Vorgaben füllen, nie umbenennen, nie löschen. */
+function vervollstaendigeDeck(d){
+  const leer = leeresDeck();
+  if (!d) return leer;
+  for (const k of Object.keys(leer)){
+    if (d[k] === undefined || d[k] === null){
+      if (k === 'kurs') { d[k] = null; continue; }
+      d[k] = leer[k];
+    }
+  }
+  for (const k of Object.keys(leer.settings)) if (d.settings[k] === undefined) d.settings[k] = leer.settings[k];
+  for (const k of Object.keys(leer.briefingStatus)) if (d.briefingStatus[k] === undefined) d.briefingStatus[k] = leer.briefingStatus[k];
+  for (const k of Object.keys(leer.terminCache)) if (d.terminCache[k] === undefined) d.terminCache[k] = leer.terminCache[k];
+  return d;
+}
+
+function speichere(){
+  try { localStorage.setItem(SPEICHER_SCHLUESSEL, JSON.stringify(zustand)); }
+  catch(e){ console.error('Speichern fehlgeschlagen:', e); }
+}
+function aktivesDeck(){ return zustand.aktivesDeck || 'privat'; }
+function deck(){ return zustand.decks[aktivesDeck()] || zustand.decks.privat; }
+function wechsleDeck(){
+  const ziel = (aktivesDeck() === 'privat') ? 'arbeit' : 'privat';
+  if (ziel === 'arbeit' && !zustand.decks.arbeit){
+    zustand.decks.arbeit = leeresDeck('Arbeit');   // erster Wechsel: das Arbeitsdeck wird bezogen
+  }
+  zustand.aktivesDeck = ziel;
+  kr = null;                                       // ein offenes Ritual gilt nur auf seinem Deck
+  speichere();
+  tagesabgleich();
+  zeigeAnsicht('bruecke');
+}
+
+/* ============================================================
+   KALENDERQUELLE — austauschbares Modul mit fester Schnittstelle.
+   v0.1: manuelle Termine. Später kommt 'google-apps-script' hinzu,
+   ohne dass Brücke oder Briefing angefasst werden müssen.
+   ============================================================ */
+const KALENDERQUELLEN = {
+  manuell: {
+    holeTermine(deckDaten, datumIso){
+      return deckDaten.termine
+        .filter(t => t.datum === datumIso)
+        .sort((a, b) => (a.uhrzeit || '99').localeCompare(b.uhrzeit || '99'));
+    }
+  },
+  /* Funkverbindung: eigene Einträge + Kopie aus dem Google-Kalender */
+  'google-apps-script': {
+    holeTermine(deckDaten, datumIso){
+      const eigene = deckDaten.termine.filter(t => t.datum === datumIso);
+      const funk = (deckDaten.terminCache.termine || []).filter(t => t.datum === datumIso);
+      return eigene.concat(funk)
+        .sort((a, b) => (a.uhrzeit || '99').localeCompare(b.uhrzeit || '99'));
+    }
+  }
+};
+
+/* Terminabruf vom Apps Script: asynchron, gedrosselt (15 Min), offline-fest.
+   Die Brücke zeigt stets den letzten Stand und frischt nach Empfang still auf. */
+function aktualisiereKalender(erzwingen){
+  const d = zustand.decks.privat;                  // Funk gibt es nur auf dem Privatdeck
+  if (!d || d.settings.kalender.typ !== 'google-apps-script' || !d.settings.kalender.scriptUrl){
+    return Promise.resolve(false);
+  }
+  const jetzt = Date.now();
+  if (!erzwingen && jetzt - (d.terminCache.letzterAbruf || 0) < 15 * 60 * 1000){
+    return Promise.resolve(false);
+  }
+  d.terminCache.letzterAbruf = jetzt;
+  return fetch(d.settings.kalender.scriptUrl, { redirect: 'follow' })
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(daten => {
+      const liste = Array.isArray(daten) ? daten : (daten.termine || []);
+      d.terminCache.termine = liste
+        .filter(t => t && t.titel && /^\d{4}-\d{2}-\d{2}$/.test(t.datum || ''))
+        .map((t, i) => ({
+          id: 'funk-' + i, quelle: 'google',
+          titel: String(t.titel).slice(0, 200),
+          ort: t.ort ? String(t.ort).slice(0, 200) : '',
+          datum: t.datum,
+          uhrzeit: /^\d{2}:\d{2}$/.test(t.uhrzeit || '') ? t.uhrzeit : null
+        }));
+      d.terminCache.stand = isoMitZone();
+      d.terminCache.gestoert = false;
+      speichere();
+      if (aktivesDeck() === 'privat' && !el('ansicht-bruecke').hidden){ renderTermineBereich(); renderAusguck(); }
+      return true;
+    })
+    .catch(() => {
+      d.terminCache.gestoert = true;
+      speichere();
+      if (aktivesDeck() === 'privat' && !el('ansicht-bruecke').hidden) renderTermineBereich();
+      return false;
+    });
+}
+function holeTermine(datumIso){
+  const d = deck();
+  const quelle = KALENDERQUELLEN[d.settings.kalender.typ] || KALENDERQUELLEN.manuell;
+  return quelle.holeTermine(d, datumIso);
+}
+
+/* ============================================================
+   PARSER — regelbasiert, deutsch. Erkennt Wochentage, „morgen“/
+   „übermorgen“, „15.7.“, „bis …“, „14:30“, „14 Uhr“.
+   Bewusst keine KI (Lastenheft, Grundprinzip 4).
+   ============================================================ */
+function parseEingabe(text){
+  let rest = ' ' + String(text || '').trim() + ' ';
+  let datum = null, uhrzeit = null;
+
+  function nimm(re){
+    const m = re.exec(rest);
+    if (m) rest = rest.slice(0, m.index) + ' ' + rest.slice(m.index + m[0].length);
+    return m;
+  }
+
+  // Uhrzeit: „14:30“ oder „14 Uhr“ (optionales „um“ davor wird mitentfernt)
+  let m = nimm(/\s(?:um\s+)?(\d{1,2}):(\d{2})(?=[\s,.!?])/);
+  if (m && +m[1] < 24 && +m[2] < 60) uhrzeit = pad2(+m[1]) + ':' + m[2];
+  if (!uhrzeit){
+    m = nimm(/\s(?:um\s+)?(\d{1,2})\s?Uhr(?=[\s,.!?])/i);
+    if (m && +m[1] < 24) uhrzeit = pad2(+m[1]) + ':00';
+  }
+
+  // Datum „15.7.“ / „15.07.2026“ (zweiter Punkt Pflicht — schützt Dezimalzahlen im Titel)
+  m = nimm(/\s(?:bis\s+|am\s+)?(\d{1,2})\.(\d{1,2})\.(\d{2,4})?(?=[\s,.!?])/);
+  if (m){
+    const t = +m[1], mo = +m[2];
+    if (t >= 1 && t <= 31 && mo >= 1 && mo <= 12){
+      let j = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : null;
+      if (j === null){
+        j = new Date().getFullYear();
+        if (datumISO(new Date(j, mo-1, t)) < heuteISO()) j++;   // ohne Jahr: nächstes Vorkommen
+      }
+      datum = datumISO(new Date(j, mo-1, t));
+    }
+  }
+
+  // Relative Angaben
+  if (!datum){
+    if (nimm(/\s(?:bis\s+)?übermorgen(?=[\s,.!?])/i))      datum = addTage(heuteISO(), 2);
+    else if (nimm(/\s(?:bis\s+)?morgen(?=[\s,.!?])/i))     datum = addTage(heuteISO(), 1);
+    else if (nimm(/\sheute(?=[\s,.!?])/i))                 datum = heuteISO();
+  }
+
+  // Wochentage: ausgeschrieben beliebige Schreibung; Kürzel nur großgeschrieben
+  // („so“, „mi…“ sind sonst zu häufige deutsche Wörter bzw. Wortanfänge)
+  if (!datum){
+    const namen = [['montag',0],['dienstag',1],['mittwoch',2],['donnerstag',3],['freitag',4],['samstag',5],['sonntag',6]];
+    for (const [n, i] of namen){
+      if (nimm(new RegExp('\\s(?:bis\\s+|am\\s+)?' + n + '(?=[\\s,.!?])', 'i'))){ datum = naechsterWochentag(i); break; }
+    }
+    if (!datum){
+      const kurz = [['Mo',0],['Di',1],['Mi',2],['Do',3],['Fr',4],['Sa',5],['So',6]];
+      for (const [k, i] of kurz){
+        if (nimm(new RegExp('\\s(?:bis\\s+|am\\s+)?' + k + '\\.?(?=[\\s,.!?])'))){ datum = naechsterWochentag(i); break; }
+      }
+    }
+  }
+
+  // Nur Uhrzeit, kein Datum: heute, falls die Zeit noch vor uns liegt — sonst morgen
+  if (!datum && uhrzeit) datum = (uhrzeit > jetztZeit()) ? heuteISO() : addTage(heuteISO(), 1);
+
+  const titel = rest.replace(/\s+/g, ' ').trim().replace(/[,–—-]\s*$/, '').trim();
+  return { titel, datum, uhrzeit };
+}
+function naechsterWochentag(zielIdx){
+  let diff = (zielIdx - wochentagIndex(heuteISO()) + 7) % 7;
+  if (diff === 0) diff = 7;                       // „Di“ am Dienstag meint den nächsten Dienstag
+  return addTage(heuteISO(), diff);
+}
+
+/* Horizont automatisch aus der Fälligkeit (Lastenheft Abschnitt 6) */
+function horizontFuerDatum(faelligAm){
+  if (!faelligAm) return 'woche';                 // ohne Frist: sichtbar halten, verschiebbar
+  const heute = heuteISO();
+  if (faelligAm <= heute) return 'heute';
+  if (faelligAm <= addTage(wochenstart(heute), 6)) return 'woche';
+  if (faelligAm.slice(0, 7) === heute.slice(0, 7)) return 'monat';
+  return 'reise';
+}
+
+/* ============================================================
+   BRIEFING — regelbasiert nach Katalog, mit Wiederholungssperre.
+   Wird einmal pro Tag zusammengesetzt und dann eingefroren.
+   ============================================================ */
+function waehleVariante(schluessel, varianten){
+  const bs = deck().briefingStatus;
+  if (varianten.length === 1) return varianten[0];
+  const letzte = bs.letzteVarianten[schluessel];
+  let kandidaten = varianten.map((v, i) => i);
+  if (deck().settings.briefing.wiederholungssperre && letzte !== undefined && letzte !== null){
+    kandidaten = kandidaten.filter(i => i !== letzte);
+  }
+  const i = kandidaten[Math.floor(Math.random() * kandidaten.length)];
+  bs.letzteVarianten[schluessel] = i;
+  return varianten[i];
+}
+
+/* Drossel seltener Zusätze: Verwendungen der laufenden Woche zählen */
+function seltenDieseWoche(feld){
+  const daten = deck().briefingStatus.selteneZusaetze[feld] || [];
+  const start = wochenstart(heuteISO());
+  return daten.filter(d => d >= start && d <= heuteISO()).length;
+}
+function merkeSelten(feld){
+  const sz = deck().briefingStatus.selteneZusaetze;
+  sz[feld] = (sz[feld] || []).concat(heuteISO()).slice(-8);
+}
+
+function kursFuerHeute(){
+  const k = deck().kurs;
+  return (k && k.fuerDatum === heuteISO()) ? k : null;
+}
+
+function erfuellteDieseWoche(){
+  const start = wochenstart(heuteISO());
+  let n = deck().logbuch.filter(e =>
+    e.datum >= start && e.datum <= heuteISO() && e.hauptmission && e.hauptmission.erfuellt).length;
+  const k = kursFuerHeute();
+  if (k && k.hauptmission.erfuellt && !deck().logbuch.some(e => e.datum === heuteISO())) n++;
+  return n;
+}
+
+function serieVonDrei(){
+  // Drei erfüllte Hauptmissionen an drei aufeinanderfolgenden Tagen, endend gestern
+  for (let i = 1; i <= 3; i++){
+    const d = addTage(heuteISO(), -i);
+    const e = deck().logbuch.find(x => x.datum === d);
+    if (!(e && e.hauptmission && e.hauptmission.erfuellt)) return false;
+  }
+  return true;
+}
+
+function baueBriefing(){
+  const bs = deck().briefingStatus;
+  if (bs.heutigesBriefing && bs.heutigesBriefing.datum === heuteISO()) return bs.heutigesBriefing;
+
+  const heute = heuteISO(), wt = wochentagIndex(heute);
+  const saetze = [];
+
+  // Baustein 1 — Begrüßung (nach Wochentag)
+  let anrede;
+  if (wt === 0)      anrede = waehleVariante('b1.montag',     KATALOG.begruessung.montag);
+  else if (wt === 4) anrede = waehleVariante('b1.freitag',    KATALOG.begruessung.freitag);
+  else if (wt >= 5 && aktivesDeck() === 'privat')
+                     anrede = waehleVariante('b1.wochenende', KATALOG.begruessung.wochenende);
+  else               anrede = waehleVariante('b1.standard',   KATALOG.begruessung.standard);
+
+  // Optionaler Zusatz nach erfülltem Ritual am Vorabend, max. 1× pro Woche
+  const k = kursFuerHeute();
+  if (k && k.gesetztAm === addTage(heute, -1) && seltenDieseWoche('kursVonGestern') < 1){
+    saetze.push(KATALOG.ritualZusatz[0]);
+    merkeSelten('kursVonGestern');
+  }
+
+  // Baustein 2 — Hauptmission (immer)
+  if (k && k.hauptmission){
+    saetze.push(waehleVariante('b2.gesetzt', KATALOG.hauptmission.gesetzt).replace('{m}', k.hauptmission.titel));
+  } else {
+    saetze.push(waehleVariante('b2.leer', KATALOG.hauptmission.leer));
+  }
+
+  // Baustein 3 — Termine (nur wenn vorhanden; sonst selten „freies Fahrwasser“)
+  const termine = holeTermine(heute);
+  if (termine.length){
+    const erster = termine[0];
+    const zeit = erster.uhrzeit || 'heute';
+    let satz;
+    if (termine.length === 1)      satz = waehleVariante('b3.einer',  KATALOG.termine.einer);
+    else if (termine.length <= 3)  satz = waehleVariante('b3.wenige', KATALOG.termine.wenige);
+    else                           satz = waehleVariante('b3.viele',  KATALOG.termine.viele);
+    saetze.push(satz.replace('{titel}', erster.titel).replace('{zeit}', zeit).replace('{n}', termine.length));
+  } else if (seltenDieseWoche('freiesFahrwasser') < 2 && Math.random() < 0.5){
+    saetze.push(KATALOG.termine.keine[0]);
+    merkeSelten('freiesFahrwasser');
+  }
+
+  // Baustein 4 — Wochenblick: früheste Frist der nächsten 3 Tage schlägt Routine-Vorschlag
+  const grenze = addTage(heute, 3);
+  const fristen = deck().vorrat
+    .filter(e => e.faelligAm && e.faelligAm <= grenze)
+    .sort((a, b) => a.faelligAm.localeCompare(b.faelligAm));
+  if (fristen.length){
+    const f = fristen[0];
+    if (f.faelligAm <= heute){
+      saetze.push(waehleVariante('b4.heute', KATALOG.wochenblick.fristHeute).replace(/\{a\}/g, f.titel));
+    } else {
+      saetze.push(waehleVariante('b4.frist', KATALOG.wochenblick.frist)
+        .replace(/\{a\}/g, f.titel).replace(/\{tag\}/g, TAGE_LANG[wochentagIndex(f.faelligAm)]));
+    }
+  } else {
+    const r = deck().routinen.find(x => x.aktiv && x.vorschlagswuerdig && routineFaellig(x, heute));
+    if (r) saetze.push(waehleVariante('b4.routine', KATALOG.wochenblick.routine).replace(/\{r\}/g, r.titel));
+  }
+
+  // Baustein 5 — Abschluss (Sonntag: Wochenbilanz — Entscheidung Punkt 1; eine Null wird nie vorgelesen)
+  let abschluss = null;
+  if (wt === 6 && aktivesDeck() === 'privat'){   // Wochenbilanz nur Privatdeck
+    const n = erfuellteDieseWoche();
+    if (n > 0){
+      const bw = n >= 6 ? 'ausgezeichneter Kurs, Captain.'
+               : n >= 4 ? 'guter Kurs, Captain.'
+               : 'Kurs gehalten — das zählt.';
+      abschluss = 'Wochenbilanz: ' + n + ' von 7 Hauptmissionen erfüllt — ' + bw;
+    }
+  }
+  if (!abschluss && serieVonDrei()) abschluss = waehleVariante('b5.serie', KATALOG.abschluss.serie);
+  if (!abschluss && wt === 0)       abschluss = KATALOG.abschluss.montag[0];
+  if (!abschluss && wt === 4 && aktivesDeck() === 'arbeit')
+                                    abschluss = KATALOG.abschluss.freitagArbeit[0];
+  if (!abschluss){
+    const pool = (aktivesDeck() === 'arbeit')
+      ? KATALOG.abschluss.standard.concat(KATALOG.abschluss.arbeitZusatz)   // nüchterner Ton (Katalog §8)
+      : KATALOG.abschluss.standard;
+    abschluss = waehleVariante('b5.standard', pool);
+  }
+  saetze.push(abschluss);
+
+  const ergebnis = { datum: heute, anrede, text: saetze.join(' ') };
+  bs.heutigesBriefing = ergebnis;
+  speichere();
+  return ergebnis;
+}
+function briefingNeuAufbauen(){ deck().briefingStatus.heutigesBriefing = null; baueBriefing(); }
+
+/* ============================================================
+   ROUTINEN-LOGIK
+   ============================================================ */
+function routineFaellig(r, datumIso){
+  if (!r.aktiv) return false;
+  const t = r.rhythmus.typ;
+  if (t === 'taeglich')    return true;
+  if (t === 'wochentage')  return (r.rhythmus.tage || []).includes(TAGE_KURZ[wochentagIndex(datumIso)]);
+  if (t === 'woechentlich') return !routineDieseWocheErledigt(r.id, datumIso);
+  return false;
+}
+function routineDieseWocheErledigt(id, datumIso){
+  const start = wochenstart(datumIso);
+  if (deck().logbuch.some(e => e.datum >= start && e.datum <= datumIso && (e.routinenErledigt || []).includes(id))) return true;
+  const k = deck().kurs;
+  if (k && k.fuerDatum >= start && k.fuerDatum <= datumIso && (k.routinenErledigt || []).includes(id)) return true;
+  const rh = deck().routinenHeute;
+  if (rh && rh.datum >= start && rh.datum <= datumIso && (rh.erledigt || []).includes(id)) return true;
+  return false;
+}
+/* Wohin gehören die heutigen Routine-Haken? In den Kurs, wenn er für heute gilt — sonst ins Tagesfeld. */
+function heutigeRoutineListe(){
+  const k = kursFuerHeute();
+  if (k){ if (!k.routinenErledigt) k.routinenErledigt = []; return k.routinenErledigt; }
+  const rh = deck().routinenHeute;
+  if (rh.datum !== heuteISO()){ rh.datum = heuteISO(); rh.erledigt = []; }
+  return rh.erledigt;
+}
+function routineHeuteErledigt(id){ return heutigeRoutineListe().includes(id); }
+function toggleRoutine(id){
+  const liste = heutigeRoutineListe();
+  const i = liste.indexOf(id);
+  if (i >= 0) liste.splice(i, 1); else liste.push(id);
+  speichere();
+  renderRoutinenBereich();
+  renderWochenroute();
+}
+
+/* ============================================================
+   BRÜCKE — nur ablesen und abhaken (Lastenheft Abschnitt 4)
+   ============================================================ */
+const el = id => document.getElementById(id);
+
+function renderBruecke(){
+  el('deck-wechsel').innerHTML = (aktivesDeck() === 'arbeit' ? 'Arbeitsdeck' : 'Privatdeck') +
+    ' <svg viewBox="0 0 24 24" aria-hidden="true">' + ICON.wechsel + '</svg>';
+  el('positionszeile').innerHTML = deutschesDatum(heuteISO()) + ' · <b>' + POSITION_KOORDINATEN + '</b>';
+  const briefing = baueBriefing();
+  el('briefing-anrede').textContent = briefing.anrede;
+  el('briefing-text').textContent = briefing.text;
+  renderWochenroute();
+  renderKursangebot();
+  renderHauptmission();
+  renderBegleitmissionen();
+  renderRoutinenBereich();
+  renderTermineBereich();
+  renderAusguck();
+}
+
+/* --- Wochenroute: Seekarte mit Kompassrose, Häfen und Segler --- */
+function renderWochenroute(){
+  const heute = heuteISO(), start = wochenstart(heute);
+  const xs = [60,108,156,204,252,300,348], ys = [44,33,46,37,26,33,23];
+  let erreicht = 0, gesamt = 0;
+  const tageHtml = [], marker = [];
+
+  for (let i = 0; i < 7; i++){
+    const d = addTage(start, i);
+    const eintrag = deck().logbuch.find(e => e.datum === d);
+    const kursTag = (deck().kurs && deck().kurs.fuerDatum === d) ? deck().kurs : null;
+    const erf = (eintrag && eintrag.hauptmission && eintrag.hauptmission.erfuellt) ||
+                (kursTag && kursTag.hauptmission && kursTag.hauptmission.erfuellt);
+    const hatte = !!eintrag || !!kursTag;
+    if (d <= heute){ if (hatte) gesamt++; if (erf) erreicht++; }
+
+    if (d === heute){
+      marker.push('<g transform="translate(' + xs[i] + ',' + ys[i] + ')">' +
+        '<circle r="14" fill="none" stroke="#D9B87E" stroke-width="1" opacity=".5"/>' +
+        (erf ? '<circle r="4.2" cy="11" fill="#D9B87E"/>' : '') +
+        '<g fill="#F5EEDC"><path d="M-7 5 L7 5 L4 8.5 L-4 8.5 Z"/><path d="M-1 4 L-1 -9 L-6 4 Z"/><path d="M1 4 L1 -7 L6.5 4 Z"/></g></g>');
+    } else if (erf){
+      marker.push('<circle cx="' + xs[i] + '" cy="' + ys[i] + '" r="4.2" fill="#D9B87E"/>');
+    } else if (hatte && d < heute){
+      marker.push('<circle cx="' + xs[i] + '" cy="' + ys[i] + '" r="4.2" fill="none" stroke="#B9C6D2" stroke-width="1.4"/>');
+    } else {
+      marker.push('<circle cx="' + xs[i] + '" cy="' + ys[i] + '" r="2" fill="#B9C6D2" opacity=".35"/>');
+    }
+    tageHtml.push('<span' + (d === heute ? ' class="heute"' : '') + '>' + TAGE_KURZ[i] + '</span>');
+  }
+
+  // Geglättete Kurslinie durch die sieben Häfen
+  let pfad = 'M ' + xs[0] + ' ' + ys[0];
+  for (let i = 1; i < 6; i++){
+    pfad += ' Q ' + xs[i] + ' ' + ys[i] + ' ' + (xs[i]+xs[i+1])/2 + ' ' + (ys[i]+ys[i+1])/2;
+  }
+  pfad += ' T ' + xs[6] + ' ' + ys[6];
+
+  const bilanz = gesamt > 0
+    ? erreicht + ' von ' + gesamt + (gesamt === 1 ? ' Hafen' : ' Häfen') + ' erreicht'
+    : 'Die Woche liegt vor dem Bug';
+
+  el('wochenroute').innerHTML =
+    '<div class="kf-kopf"><span>Wochenroute</span><span>' + bilanz + '</span></div>' +
+    '<svg class="route" viewBox="0 0 390 74">' +
+      '<g transform="translate(28,37)" stroke="#D9B87E" fill="none">' +
+        '<circle r="24" stroke-width="1" opacity=".55"/><circle r="16" stroke-width=".8" opacity=".45"/>' +
+        '<path d="M0 -24 L4 -4 L0 0 L-4 -4 Z" fill="#D9B87E" stroke="none"/>' +
+        '<path d="M0 24 L4 4 L0 0 L-4 4 Z M-24 0 L-4 -4 L0 0 L-4 4 Z M24 0 L4 -4 L0 0 L4 4 Z" stroke-width="1"/>' +
+        '<path d="M-15 -15 L0 0 M15 -15 L0 0 M-15 15 L0 0 M15 15 L0 0" stroke-width=".7" opacity=".5"/>' +
+        '<text x="0" y="-29" text-anchor="middle" fill="#D9B87E" stroke="none" font-family="Alegreya Sans" font-weight="800" font-size="9">N</text>' +
+      '</g>' +
+      '<path d="' + pfad + '" fill="none" stroke="#D9B87E" stroke-width="1.4" stroke-dasharray="2 7" stroke-linecap="round"/>' +
+      marker.join('') +
+      '<text x="140" y="66" fill="#B9C6D2" opacity=".55" font-family="Alegreya Sans" font-size="9.5" font-weight="700">12</text>' +
+      '<text x="260" y="60" fill="#B9C6D2" opacity=".55" font-family="Alegreya Sans" font-size="9.5" font-weight="700">27</text>' +
+      '<text x="320" y="55" fill="#B9C6D2" opacity=".55" font-family="Alegreya Sans" font-size="9.5" font-weight="700">41</text>' +
+    '</svg>' +
+    '<div class="tage">' + tageHtml.join('') + '</div>';
+}
+
+/* --- Kursangebot bei ausgefallenem Ritual: einmalig pro Tag, kein Schuldgefühl --- */
+function renderKursangebot(){
+  const feld = el('kursangebot');
+  const k = deck().kurs, heute = heuteISO();
+  const kursMorgen = k && k.fuerDatum > heute;
+  const zeigen = !kursFuerHeute() && !kursMorgen && deck().kursAngebot.abgelehntAm !== heute;
+  if (!zeigen){ feld.hidden = true; feld.innerHTML = ''; return; }
+
+  let inhalt;
+  if (deck().vorrat.length){
+    inhalt = '<p>Kurs für heute noch setzen? Eine Wahl genügt:</p>' +
+      deck().vorrat.slice()
+        .sort((a, b) => (a.faelligAm || '9999').localeCompare(b.faelligAm || '9999'))
+        .map(e => '<button class="wahl" data-id="' + e.id + '"><span class="w-ring"></span>' +
+          '<span class="w-text"><span class="w-titel">' + entk(e.titel) + '</span>' +
+          (e.faelligAm ? '<span class="w-meta">fällig ' + kurzDatum(e.faelligAm) + '</span>' : '') +
+          '</span></button>').join('') +
+      '<div class="fussleiste"><button class="knopf-still" id="btn-kurs-spaeter">Heute ohne Kurs fahren</button></div>';
+  } else {
+    inhalt = '<p>Der Vorrat ist leer, Captain. Neue Einträge entstehen im Kartenraum.</p>' +
+      '<div class="fussleiste"><button class="knopf-still" id="btn-kurs-spaeter">Verstanden</button></div>';
+  }
+  feld.innerHTML = inhalt;
+  feld.hidden = false;
+
+  feld.querySelectorAll('.wahl').forEach(b => b.addEventListener('click', () => schnellKurs(b.dataset.id)));
+  const sp = el('btn-kurs-spaeter');
+  if (sp) sp.addEventListener('click', () => {
+    deck().kursAngebot.abgelehntAm = heuteISO();
+    speichere(); renderBruecke();
+  });
+}
+function schnellKurs(id){
+  const d = deck();
+  const i = d.vorrat.findIndex(e => e.id === id);
+  if (i < 0) return;
+  const e = d.vorrat.splice(i, 1)[0];
+  d.kurs = {
+    fuerDatum: heuteISO(), gesetztAm: heuteISO(),
+    hauptmission: { id: e.id, titel: e.titel, bereich: e.bereich,
+                    naechsterSchritt: e.naechsterSchritt || null, faelligAm: e.faelligAm || null, erfuellt: false },
+    begleitmissionen: [], routinenErledigt: []
+  };
+  speichere();
+  briefingNeuAufbauen();   // das Briefing nennt die Mission jetzt beim Namen
+  renderBruecke();
+}
+
+/* --- Hauptmission --- */
+function renderHauptmission(){
+  const ziel = el('hm-bereich');
+  const k = deck().kurs, heute = heuteISO(), morgen = addTage(heute, 1);
+
+  if (k && k.fuerDatum > heute){
+    const wann = (k.fuerDatum === morgen) ? 'morgen' : TAGE_LANG[wochentagIndex(k.fuerDatum)];
+    const gruss = (aktivesDeck() === 'arbeit') ? 'Feierabend, Captain.' : 'Gute Nacht, Captain.';
+    ziel.innerHTML =
+      '<div class="hauptmission"><div class="hm-label">' + icon('stern') + '<span>Hauptmission</span></div>' +
+      '<div class="hm-titel">' + entk(k.hauptmission.titel) + '</div>' +
+      '<div class="hm-schritt">Kurs gesetzt für <b>' + wann + '</b>. ' + gruss + '</div></div>';
+    return;
+  }
+  if (!kursFuerHeute()){
+    ziel.innerHTML = el('kursangebot').hidden === false ? '' :
+      '<div class="hauptmission"><div class="hm-label">' + icon('stern') + '<span>Hauptmission</span></div>' +
+      '<div class="hm-schritt" style="margin-bottom:4px">Kein Kurs für heute. Der Kartenraum wartet heute Abend.</div></div>';
+    return;
+  }
+
+  const hm = k.hauptmission;
+  ziel.innerHTML =
+    '<div class="hauptmission">' +
+      '<div class="hm-label">' + icon('stern') + '<span>Hauptmission</span></div>' +
+      '<div class="hm-titel">' + entk(hm.titel) + '</div>' +
+      (hm.naechsterSchritt ? '<div class="hm-schritt">Nächster Schritt: <b>' + entk(hm.naechsterSchritt) + '</b></div>' : '') +
+      '<div class="hm-fuss">' +
+        '<span class="status"><span class="punkt' + (hm.erfuellt ? ' gruen' : '') + '"></span>' +
+          (hm.erfuellt ? 'Erfüllt' + (hm.erfuelltUm ? ' um ' + hm.erfuelltUm : '') : 'Steht bevor') + '</span>' +
+        (hm.erfuellt
+          ? '<button class="knopf-still" id="btn-hm-zurueck">Zurücknehmen</button>'
+          : '<button class="knopf" id="btn-hm-erfuellt">' + icon('flagge') + 'Erfüllt</button>') +
+      '</div></div>';
+
+  const bE = el('btn-hm-erfuellt'), bZ = el('btn-hm-zurueck');
+  if (bE) bE.addEventListener('click', () => {
+    k.hauptmission.erfuellt = true;
+    k.hauptmission.erfuelltUm = jetztZeit();
+    speichere(); zeigeFlagge(); renderBruecke();
+  });
+  if (bZ) bZ.addEventListener('click', () => {
+    k.hauptmission.erfuellt = false;
+    delete k.hauptmission.erfuelltUm;
+    speichere(); renderBruecke();
+  });
+}
+
+/* --- Begleitmissionen --- */
+function renderBegleitmissionen(){
+  const ziel = el('bm-bereich');
+  const k = kursFuerHeute();
+  if (!k || !k.begleitmissionen.length){ ziel.innerHTML = ''; return; }
+
+  ziel.innerHTML =
+    '<div class="titelzeile">' + icon('anker') + '<h2>Begleitmissionen</h2><div class="linie"></div></div>' +
+    k.begleitmissionen.map((b, i) =>
+      '<div class="karte' + (b.erfuellt ? ' erledigt' : '') + '" data-i="' + i + '" role="button" tabindex="0">' +
+        '<div class="ikon">' + icon(bereichVon(b.bereich).ikon) + '</div>' +
+        '<div class="text"><div class="m-titel">' + entk(b.titel) + '</div>' +
+          '<div class="m-schritt">' + (b.erfuellt && b.erfuelltUm ? 'Erledigt um ' + b.erfuelltUm
+            : b.naechsterSchritt ? 'Nächster Schritt: ' + entk(b.naechsterSchritt)
+            : bereichVon(b.bereich).name) + '</div></div>' +
+        '<div class="haken"></div></div>').join('');
+
+  ziel.querySelectorAll('.karte').forEach(kt => kt.addEventListener('click', () => {
+    const b = k.begleitmissionen[+kt.dataset.i];
+    b.erfuellt = !b.erfuellt;
+    if (b.erfuellt) b.erfuelltUm = jetztZeit(); else delete b.erfuelltUm;
+    speichere(); renderBegleitmissionen();
+  }));
+}
+
+/* --- Bordroutinen auf der Brücke --- */
+function renderRoutinenBereich(){
+  const ziel = el('routinen-bereich');
+  const heute = heuteISO();
+  const liste = deck().routinen.filter(r => r.aktiv && (routineFaellig(r, heute) || routineHeuteErledigt(r.id)));
+  if (!liste.length){ ziel.innerHTML = ''; return; }
+
+  ziel.innerHTML =
+    '<div class="titelzeile">' + icon('uhr') + '<h2>Bordroutinen</h2><div class="linie"></div></div>' +
+    '<div class="routinen">' + liste.map(r =>
+      '<button class="routine' + (routineHeuteErledigt(r.id) ? ' erledigt' : '') + '" data-id="' + r.id + '">' +
+      '<span class="ring"></span>' + entk(r.titel) + '</button>').join('') + '</div>';
+
+  ziel.querySelectorAll('.routine').forEach(b => b.addEventListener('click', () => toggleRoutine(b.dataset.id)));
+}
+
+/* --- Termine heute --- */
+function renderTermineBereich(){
+  const ziel = el('termine-bereich');
+  const termine = holeTermine(heuteISO());
+  const kopf = '<div class="titelzeile">' + icon('kalender') + '<h2>Termine heute</h2><div class="linie"></div></div>';
+  let rumpf;
+  if (!termine.length){
+    rumpf = '<div class="leer-hinweis">Freies Fahrwasser — keine Termine.</div>';
+  } else {
+    const jetzt = jetztZeit();
+    const naechster = termine.find(t => (t.uhrzeit || '99') >= jetzt);
+    rumpf = termine.map(t =>
+      '<div class="termin' + (t === naechster ? ' naechster' : '') + '">' +
+        '<div class="t-zeit">' + (t.uhrzeit || '—') + '</div>' +
+        '<div><div class="t-titel">' + entk(t.titel) + '</div>' +
+        (t.ort ? '<div class="t-ort">' + entk(t.ort) + '</div>' : '') + '</div></div>').join('');
+  }
+  ziel.innerHTML = kopf + rumpf + funkstandZeile();
+}
+
+/* Stille Standangabe der Funkverbindung unter den heutigen Terminen */
+function funkstandZeile(){
+  if (aktivesDeck() !== 'privat') return '';
+  const d = deck();
+  if (d.settings.kalender.typ !== 'google-apps-script') return '';
+  const tc = d.terminCache;
+  const stand = tc.stand
+    ? ((tc.stand.slice(0, 10) === heuteISO() ? '' : kurzDatum(tc.stand.slice(0, 10)) + ' ') + tc.stand.slice(11, 16) + ' Uhr')
+    : null;
+  if (tc.gestoert) return '<div class="funkstand">Funkverbindung gestört' + (stand ? ' — letzter Stand ' + stand : '') + '.</div>';
+  if (stand) return '<div class="funkstand">Google-Kalender · Stand ' + stand + '</div>';
+  return '<div class="funkstand">Google-Kalender · noch kein Abruf</div>';
+}
+
+/* --- Ausguck: Termine der nächsten sieben Tage — damit nichts vorbeisegelt --- */
+function renderAusguck(){
+  const ziel = el('ausguck-bereich');
+  const heute = heuteISO();
+  const tage = [];
+  for (let i = 1; i <= 7; i++){
+    const d = addTage(heute, i);
+    const termine = holeTermine(d);
+    if (termine.length) tage.push({ datum: d, termine });
+  }
+  const kopf = '<div class="titelzeile">' + icon('fernrohr') + '<h2>Ausguck</h2><div class="linie"></div></div>';
+  if (!tage.length){
+    ziel.innerHTML = kopf + '<div class="leer-hinweis">Klare Sicht — keine Termine in den n\u00e4chsten sieben Tagen.</div>';
+    return;
+  }
+  ziel.innerHTML = kopf + tage.map(t => {
+    const dt = parseISO(t.datum);
+    const name = (t.datum === addTage(heute, 1) ? 'Morgen \u00b7 ' : '') +
+      TAGE_LANG[wochentagIndex(t.datum)] + ' <b>' + dt.getDate() + '.' + (dt.getMonth() + 1) + '.</b>';
+    return '<div class="ausguck-tag">' + name + '</div>' +
+      t.termine.map(x =>
+        '<div class="termin"><div class="t-zeit">' + (x.uhrzeit || '\u2014') + '</div>' +
+        '<div><div class="t-titel">' + entk(x.titel) + '</div>' +
+        (x.ort ? '<div class="t-ort">' + entk(x.ort) + '</div>' : '') + '</div></div>').join('');
+  }).join('');
+}
+
+/* --- Belohnung: die Flagge (Designverfassung: ruhig, kurz, elegant) --- */
+let flaggeTimer = null;
+function zeigeFlagge(){
+  const ov = el('flagge-overlay');
+  ov.hidden = true;
+  void ov.offsetWidth;      // Animation neu starten
+  ov.hidden = false;
+  clearTimeout(flaggeTimer);
+  flaggeTimer = setTimeout(() => { ov.hidden = true; }, 2600);
+}
+
+/* HTML-Entkommung für alle nutzereigenen Texte */
+function entk(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* ============================================================
+   KARTENRAUM — geführtes Ritual in drei Schritten.
+   Leitgedanke: pro Bildschirm genau eine Entscheidung.
+   Das Ritual plant stets den MORGIGEN Tag; der heutige Tag wird
+   nur über das Kursangebot der Brücke nachgesetzt (Lastenheft 4).
+   ============================================================ */
+let kr = null;   // flüchtiger Ritualzustand — nichts davon wird gespeichert
+
+/* Das Ritual plant den nächsten Tag — auf dem Arbeitsdeck freitags gleich den Montag:
+   der Montagmorgen steht am Freitag, das Wochenende bleibt arbeitsfrei im Kopf (Lastenheft 4). */
+function ritualZielDatum(){
+  const wt = wochentagIndex(heuteISO());
+  if (aktivesDeck() === 'arbeit' && wt >= 4) return addTage(heuteISO(), 7 - wt);
+  return addTage(heuteISO(), 1);
+}
+
+function oeffneKartenraum(){
+  kr = { zielDatum: ritualZielDatum(), rb: null, hauptWahl: null, schrittText: '', begleitWahl: [] };
+  zeigeAnsicht('kartenraum');
+  renderSchritt1();
+  zeigeSchritt(1);
+}
+
+function zeigeSchritt(n){
+  const felder = { 1:'kr-schritt1', 2:'kr-schritt2', '3a':'kr-schritt3a', '3b':'kr-schritt3b', ende:'kr-abschluss' };
+  for (const k in felder) el(felder[k]).hidden = true;
+  el(felder[n]).hidden = false;
+  const stufe = (n === 1) ? 1 : (n === 2) ? 2 : 3;
+  el('kr-punkte').querySelectorAll('.p').forEach((p, i) => p.classList.toggle('voll', i < stufe));
+  window.scrollTo(0, 0);
+}
+
+/* --- Schritt 1: Rückblick — eine Berührung pro Karte, kein Kommentarfeld --- */
+function renderSchritt1(){
+  const ziel = el('kr-schritt1');
+  const k = deck().kurs, heute = heuteISO();
+
+  // Fall A: Kurs für morgen steht bereits (Ritual wird wiederholt)
+  if (k && k.fuerDatum > heute){
+    ziel.innerHTML =
+      '<div class="kr-frage">Rückblick</div>' +
+      '<div class="kr-hinweis">Der Kurs für ' + TAGE_LANG[wochentagIndex(k.fuerDatum)] + ' ist bereits gesetzt: „' + entk(k.hauptmission.titel) + '“.<br>' +
+      'Wer weitergeht und neu wählt, schickt die bisherige Wahl zurück in den Vorrat.</div>' +
+      '<div class="kr-fuss"><span></span><button class="knopf" id="btn-s1-weiter">Weiter</button></div>';
+    el('btn-s1-weiter').addEventListener('click', () => { renderSchritt2(); zeigeSchritt(2); });
+    return;
+  }
+
+  // Fall B: kein offener Kurs — nichts zu prüfen
+  if (!k){
+    ziel.innerHTML =
+      '<div class="kr-frage">Rückblick</div>' +
+      '<div class="kr-hinweis">Kein offener Kurs — nichts zu prüfen. Weiter zum Vorrat.</div>' +
+      '<div class="kr-fuss"><span></span><button class="knopf" id="btn-s1-weiter">Weiter</button></div>';
+    el('btn-s1-weiter').addEventListener('click', () => { renderSchritt2(); zeigeSchritt(2); });
+    return;
+  }
+
+  // Fall C: Rückblick auf den offenen Kurs (heute oder — nach Pause — ein früherer Tag)
+  kr.rb = { haupt: !!k.hauptmission.erfuellt, begleit: k.begleitmissionen.map(b => !!b.erfuellt) };
+  const alt = k.fuerDatum < heute;
+
+  function paar(art, index, gewaehltErledigt){
+    return '<div class="aktionspaar">' +
+      '<button class="a-erledigt' + (gewaehltErledigt ? ' gewaehlt' : '') + '" data-art="' + art + '" data-i="' + index + '" data-w="1">Erledigt</button>' +
+      '<button class="a-vorrat'  + (!gewaehltErledigt ? ' gewaehlt' : '') + '" data-art="' + art + '" data-i="' + index + '" data-w="0">Zurück in den Vorrat</button>' +
+    '</div>';
+  }
+
+  let html =
+    '<div class="kr-frage">Rückblick</div>' +
+    '<div class="kr-hinweis">' + (alt ? 'Offener Kurs vom ' + kurzDatum(k.fuerDatum) + '.' : 'Wie lief der Tag, Captain?') + '</div>' +
+    '<div class="rk-karte haupt"><div class="rk-art">Hauptmission</div>' +
+      '<div class="rk-titel">' + entk(k.hauptmission.titel) + '</div>' + paar('h', 0, kr.rb.haupt) + '</div>' +
+    k.begleitmissionen.map((b, i) =>
+      '<div class="rk-karte"><div class="rk-art">Begleitmission</div>' +
+      '<div class="rk-titel">' + entk(b.titel) + '</div>' + paar('b', i, kr.rb.begleit[i]) + '</div>').join('');
+
+  // Bordroutinen zum Abhaken — nur wenn der Kurs für heute gilt (nur dann greifen die Haken)
+  if (!alt){
+    const routinen = deck().routinen.filter(r => r.aktiv && (routineFaellig(r, heute) || routineHeuteErledigt(r.id)));
+    if (routinen.length){
+      html += '<div class="titelzeile" style="margin-top:18px">' + icon('uhr') + '<h2>Bordroutinen</h2><div class="linie"></div></div>' +
+        '<div class="routinen" id="rk-routinen">' + routinen.map(r =>
+          '<button class="routine' + (routineHeuteErledigt(r.id) ? ' erledigt' : '') + '" data-id="' + r.id + '">' +
+          '<span class="ring"></span>' + entk(r.titel) + '</button>').join('') + '</div>';
+    }
+  }
+  html += '<div class="kr-fuss"><span></span><button class="knopf" id="btn-s1-weiter">Weiter</button></div>';
+  ziel.innerHTML = html;
+
+  ziel.querySelectorAll('.aktionspaar button').forEach(b => b.addEventListener('click', () => {
+    const erledigt = b.dataset.w === '1';
+    if (b.dataset.art === 'h') kr.rb.haupt = erledigt;
+    else kr.rb.begleit[+b.dataset.i] = erledigt;
+    renderSchritt1();   // Zustand neu zeichnen (kr.rb bleibt erhalten — siehe Guard unten)
+  }));
+  ziel.querySelectorAll('#rk-routinen .routine').forEach(b => b.addEventListener('click', () => {
+    toggleRoutine(b.dataset.id); renderSchritt1();
+  }));
+  el('btn-s1-weiter').addEventListener('click', () => {
+    commitRueckblick();
+    renderSchritt2(); zeigeSchritt(2);
+  });
+}
+
+/* Beim Neuzeichnen von Schritt 1 darf kr.rb nicht überschrieben werden */
+const _renderSchritt1 = renderSchritt1;
+renderSchritt1 = function(){
+  const merker = kr && kr.rb;
+  _renderSchritt1();
+  if (merker && kr.rb) kr.rb = merker;
+  // Buttons nach Wiederherstellung des Zustands korrekt markieren
+  if (merker){
+    document.querySelectorAll('#kr-schritt1 .aktionspaar button').forEach(b => {
+      const erledigt = (b.dataset.art === 'h') ? merker.haupt : merker.begleit[+b.dataset.i];
+      const istErledigtKnopf = b.dataset.w === '1';
+      b.classList.toggle('gewaehlt', erledigt === istErledigtKnopf);
+    });
+  }
+};
+
+/* Rückblick festschreiben: Logbucheintrag, Unerfülltes zurück in den Vorrat, Kurs schließen */
+function commitRueckblick(){
+  const d = deck(), k = d.kurs;
+  if (!k || k.fuerDatum > heuteISO() || !kr.rb) return;
+
+  const eintrag = {
+    datum: k.fuerDatum,
+    hauptmission: { titel: k.hauptmission.titel, erfuellt: kr.rb.haupt },
+    begleitmissionen: k.begleitmissionen.map((b, i) => ({ titel: b.titel, erfuellt: kr.rb.begleit[i] })),
+    routinenErledigt: (k.fuerDatum === heuteISO()) ? heutigeRoutineListe().slice() : (k.routinenErledigt || [])
+  };
+  d.logbuch = d.logbuch.filter(e => e.datum !== eintrag.datum);   // Datum ersetzt, nie dupliziert
+  d.logbuch.push(eintrag);
+  d.logbuch.sort((a, b) => a.datum.localeCompare(b.datum));
+
+  const frischErfuellt = kr.rb.haupt && !k.hauptmission.erfuellt;
+  if (!kr.rb.haupt) d.vorrat.push(missionZuVorrat(k.hauptmission));
+  k.begleitmissionen.forEach((b, i) => { if (!kr.rb.begleit[i]) d.vorrat.push(missionZuVorrat(b)); });
+
+  // Heutige Routine-Haken bleiben nach dem Ritual auf der Brücke sichtbar
+  if (eintrag.datum === heuteISO()){
+    d.routinenHeute = { datum: heuteISO(), erledigt: eintrag.routinenErledigt.slice() };
+  }
+  d.kurs = null;
+  kr.rb = null;
+  speichere();
+  if (frischErfuellt) zeigeFlagge();   // Belohnung nur, wenn sie nicht schon auf der Brücke lief
+}
+
+/* Eine Mission kehrt mit ihrer ID in den Vorrat zurück (Exportformat 4.4) */
+function missionZuVorrat(m){
+  const e = {
+    id: m.id || neueId(),
+    titel: m.titel,
+    bereich: m.bereich || 'allgemein',
+    horizont: horizontFuerDatum(m.faelligAm || null),
+    erstelltAm: isoMitZone()
+  };
+  if (m.faelligAm) e.faelligAm = m.faelligAm;
+  if (m.naechsterSchritt) e.naechsterSchritt = m.naechsterSchritt;
+  return e;
+}
+
+/* --- Schritt 2: Vorrat sichten — ein Eingabefeld, Parser, sechs Symbole --- */
+const eingabe = { parse: null, bereich: 'allgemein', typUeberschrieben: null };
+
+function renderSchritt2(){
+  el('vorrat-eingabe').value = '';
+  eingabe.parse = null; eingabe.typUeberschrieben = null;
+  aktualisiereParse();
+  renderBereichWahl();
+  renderVorratListe();
+}
+
+function renderBereichWahl(){
+  el('bereich-wahl').innerHTML = BEREICHE.map(b =>
+    '<button type="button" data-id="' + b.id + '"' + (b.id === eingabe.bereich ? ' class="gewaehlt"' : '') + '>' +
+    '<span class="bw-ring">' + icon(b.ikon) + '</span><span class="bw-name">' + b.name + '</span></button>').join('');
+  el('bereich-wahl').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    eingabe.bereich = b.dataset.id;
+    renderBereichWahl();
+  }));
+}
+
+function eingabeTyp(){
+  if (eingabe.typUeberschrieben) return eingabe.typUeberschrieben;
+  return (eingabe.parse && eingabe.parse.uhrzeit) ? 'termin' : 'aufgabe';
+}
+
+function aktualisiereParse(){
+  const text = el('vorrat-eingabe').value.trim();
+  const knopf = el('btn-eintrag-speichern'), hin = el('parse-hinweis');
+  hin.classList.remove('warnung');
+  if (!text){ knopf.hidden = true; hin.innerHTML = ''; return; }
+
+  const p = parseEingabe(text);
+  eingabe.parse = p;
+  const typ = eingabeTyp();
+
+  let teile = [];
+  if (p.datum){
+    teile.push('Erkannt: ' + TAGE_LANG[wochentagIndex(p.datum)] + ', ' +
+      parseISO(p.datum).getDate() + '. ' + MONATE[parseISO(p.datum).getMonth()] +
+      (p.uhrzeit ? ' · ' + p.uhrzeit : ''));
+  } else {
+    teile.push('Ohne Datum — landet unter „Diese Woche“.');
+  }
+  if (p.uhrzeit){
+    teile.push('<button type="button" class="mini-knopf" id="btn-typ-toggle">stattdessen als ' +
+      (typ === 'termin' ? 'Aufgabe' : 'Termin') + ' speichern</button>');
+  }
+  hin.innerHTML = teile.join(' ');
+  const t = el('btn-typ-toggle');
+  if (t) t.addEventListener('click', () => {
+    eingabe.typUeberschrieben = (eingabeTyp() === 'termin') ? 'aufgabe' : 'termin';
+    aktualisiereParse();
+  });
+
+  knopf.textContent = (typ === 'termin') ? 'Termin eintragen' : 'In den Vorrat';
+  knopf.hidden = !p.titel;
+}
+
+function speichereEintrag(){
+  const p = eingabe.parse;
+  const hin = el('parse-hinweis');
+  if (!p || !p.titel){ hin.classList.add('warnung'); hin.textContent = 'Ein Titel fehlt noch.'; return; }
+
+  if (eingabeTyp() === 'termin'){
+    deck().termine.push({ id: neueId(), titel: p.titel, ort: '', datum: p.datum, uhrzeit: p.uhrzeit || null });
+  } else {
+    const e = { id: neueId(), titel: p.titel, bereich: eingabe.bereich,
+                horizont: horizontFuerDatum(p.datum), erstelltAm: isoMitZone() };
+    if (p.datum) e.faelligAm = p.datum;
+    deck().vorrat.push(e);
+  }
+  speichere();
+  el('vorrat-eingabe').value = '';
+  eingabe.typUeberschrieben = null;
+  aktualisiereParse();
+  renderVorratListe();
+  hin.textContent = 'Eingetragen.';
+}
+
+function renderVorratListe(){
+  tagesabgleich();
+  const ziel = el('vorrat-liste');
+  const gruppen = HORIZONTE.map(h => ({
+    h,
+    eintraege: deck().vorrat
+      .filter(e => e.horizont === h.id)
+      .sort((a, b) => (a.faelligAm || '9999').localeCompare(b.faelligAm || '9999'))
+  })).filter(g => g.eintraege.length);
+
+  if (!gruppen.length){
+    ziel.innerHTML = '<div class="leer-hinweis" style="margin-top:22px">Der Vorrat ist leer — freie Ladefläche.</div>';
+    return;
+  }
+  ziel.innerHTML = gruppen.map(g =>
+    '<div class="vorrat-gruppe"><h3>' + g.h.name + '<span class="linie"></span></h3>' +
+    g.eintraege.map(e =>
+      '<div class="vorrat-item">' +
+        '<svg class="vi-ikon" viewBox="0 0 24 24">' + ICON[bereichVon(e.bereich).ikon] + '</svg>' +
+        '<div class="vi-text"><div class="vi-titel">' + entk(e.titel) + '</div>' +
+          '<div class="vi-meta">' + bereichVon(e.bereich).name +
+          (e.faelligAm ? ' · fällig ' + kurzDatum(e.faelligAm) : '') + '</div></div>' +
+        (e.faelligAm ? '' : '<button class="mini-knopf" data-tu="schieben" data-id="' + e.id + '">Verschieben</button>') +
+        '<button class="mini-knopf" data-tu="streichen" data-id="' + e.id + '">Streichen</button>' +
+      '</div>').join('') + '</div>').join('');
+
+  ziel.querySelectorAll('.mini-knopf').forEach(b => b.addEventListener('click', () => {
+    const d = deck(), e = d.vorrat.find(x => x.id === b.dataset.id);
+    if (!e) return;
+    if (b.dataset.tu === 'streichen'){
+      d.vorrat = d.vorrat.filter(x => x.id !== e.id);       // Wisch links im Lastenheft = Streichen
+    } else {
+      const reihe = ['woche', 'monat', 'reise'];             // Wisch rechts = Horizont wechseln
+      e.horizont = reihe[(reihe.indexOf(e.horizont) + 1) % reihe.length];
+    }
+    speichere(); renderVorratListe();
+  }));
+}
+
+/* --- Schritt 3a: erst nur EINE Frage — die Hauptmission --- */
+function betreteSchritt3a(){
+  const d = deck();
+  // Eine bereits getroffene Morgen-Wahl kehrt in den Vorrat zurück, bevor neu gewählt wird
+  if (d.kurs && d.kurs.fuerDatum > heuteISO()){
+    d.vorrat.push(missionZuVorrat(d.kurs.hauptmission));
+    d.kurs.begleitmissionen.forEach(b => d.vorrat.push(missionZuVorrat(b)));
+    d.kurs = null;
+    speichere();
+  }
+  kr.hauptWahl = null; kr.schrittText = '';
+  renderSchritt3a();
+  zeigeSchritt('3a');
+}
+
+function renderSchritt3a(){
+  const ziel = el('kr-schritt3a');
+  const zielTag = TAGE_LANG[wochentagIndex(kr.zielDatum)];
+
+  if (!kr.hauptWahl){
+    const vorrat = deck().vorrat.slice()
+      .sort((a, b) => (a.faelligAm || '9999').localeCompare(b.faelligAm || '9999'));
+    const frage = (kr.zielDatum === addTage(heuteISO(), 1))
+      ? 'Was macht morgen zum Erfolg?'
+      : 'Was macht den ' + zielTag + ' zum Erfolg?';
+    ziel.innerHTML =
+      '<div class="kr-frage">' + frage + '</div>' +
+      '<div class="kr-hinweis">Ein Eintrag wird zur Hauptmission für ' + zielTag + '.</div>' +
+      (vorrat.length
+        ? vorrat.map(e =>
+            '<button class="wahl" data-id="' + e.id + '"><span class="w-ring"></span>' +
+            '<span class="w-text"><span class="w-titel">' + entk(e.titel) + '</span>' +
+            '<span class="w-meta">' + bereichVon(e.bereich).name +
+            (e.faelligAm ? (e.faelligAm <= kr.zielDatum ? ' · <b>fällig ' + kurzDatum(e.faelligAm) + '</b>'
+                                                        : ' · fällig ' + kurzDatum(e.faelligAm)) : '') +
+            '</span></span></button>').join('')
+        : '<div class="leer-hinweis">Der Vorrat ist leer. Ein Schritt zurück genügt, um ihn zu füllen.</div>') +
+      '<div class="kr-fuss"><button class="knopf-still" id="btn-3a-zurueck">Zurück zum Vorrat</button><span></span></div>';
+
+    ziel.querySelectorAll('.wahl').forEach(b => b.addEventListener('click', () => {
+      kr.hauptWahl = b.dataset.id;
+      const e = deck().vorrat.find(x => x.id === kr.hauptWahl);
+      kr.schrittText = (e && e.naechsterSchritt) || '';
+      renderSchritt3a();
+    }));
+    el('btn-3a-zurueck').addEventListener('click', () => { renderSchritt2(); zeigeSchritt(2); });
+    return;
+  }
+
+  const e = deck().vorrat.find(x => x.id === kr.hauptWahl);
+  if (!e){ kr.hauptWahl = null; renderSchritt3a(); return; }
+  ziel.innerHTML =
+    '<div class="kr-frage">Hauptmission für ' + zielTag + '</div>' +
+    '<div class="hauptmission"><div class="hm-label">' + icon('stern') + '<span>Hauptmission</span></div>' +
+      '<div class="hm-titel">' + entk(e.titel) + '</div></div>' +
+    '<div class="formzeile" style="margin-top:16px"><label for="hm-schritt-eingabe">Nächster Schritt (optional)</label>' +
+      '<input id="hm-schritt-eingabe" class="eingabefeld" type="text" ' +
+      'placeholder="Womit fängt es an?" value="' + entk(kr.schrittText) + '" autocomplete="off"></div>' +
+    '<div class="kr-fuss"><button class="knopf-still" id="btn-3a-andere">Andere Wahl</button>' +
+    '<button class="knopf" id="btn-3a-weiter">Weiter</button></div>';
+
+  el('hm-schritt-eingabe').addEventListener('input', ev => { kr.schrittText = ev.target.value; });
+  el('btn-3a-andere').addEventListener('click', () => { kr.hauptWahl = null; renderSchritt3a(); });
+  el('btn-3a-weiter').addEventListener('click', () => { betreteSchritt3b(); });
+}
+
+/* --- Schritt 3b: Begleitmissionen (bis zu 4), Fälliges wird vorgeschlagen --- */
+function betreteSchritt3b(){
+  const kandidaten = deck().vorrat.filter(x => x.id !== kr.hauptWahl);
+  kr.begleitWahl = kandidaten
+    .filter(x => x.faelligAm && x.faelligAm <= kr.zielDatum)
+    .slice(0, 4).map(x => x.id);
+  renderSchritt3b();
+  zeigeSchritt('3b');
+}
+
+function renderSchritt3b(){
+  const ziel = el('kr-schritt3b');
+  const kandidaten = deck().vorrat
+    .filter(x => x.id !== kr.hauptWahl)
+    .sort((a, b) => (a.faelligAm || '9999').localeCompare(b.faelligAm || '9999'));
+
+  ziel.innerHTML =
+    '<div class="kr-frage">Begleitmissionen wählen</div>' +
+    '<div class="kr-hinweis">' + kr.begleitWahl.length + ' von 4 gewählt · Fälliges ist vorgeschlagen.</div>' +
+    (kandidaten.length
+      ? kandidaten.map(e =>
+          '<button class="wahl' + (kr.begleitWahl.includes(e.id) ? ' gewaehlt' : '') + '" data-id="' + e.id + '">' +
+          '<span class="w-ring"></span><span class="w-text"><span class="w-titel">' + entk(e.titel) + '</span>' +
+          '<span class="w-meta">' + bereichVon(e.bereich).name +
+          (e.faelligAm ? (e.faelligAm <= kr.zielDatum ? ' · <b>fällig ' + kurzDatum(e.faelligAm) + '</b>'
+                                                      : ' · fällig ' + kurzDatum(e.faelligAm)) : '') +
+          '</span></span></button>').join('')
+      : '<div class="leer-hinweis">Keine weiteren Einträge im Vorrat — die Hauptmission genügt.</div>') +
+    '<div class="kr-fuss"><button class="knopf-still" id="btn-3b-zurueck">Zurück</button>' +
+    '<button class="knopf" id="btn-3b-setzen">Kurs setzen</button></div>';
+
+  ziel.querySelectorAll('.wahl').forEach(b => b.addEventListener('click', () => {
+    const id = b.dataset.id, i = kr.begleitWahl.indexOf(id);
+    if (i >= 0) kr.begleitWahl.splice(i, 1);
+    else if (kr.begleitWahl.length < 4) kr.begleitWahl.push(id);
+    renderSchritt3b();
+  }));
+  el('btn-3b-zurueck').addEventListener('click', () => renderSchritt3aUndZeige());
+  el('btn-3b-setzen').addEventListener('click', () => setzeKurs());
+}
+function renderSchritt3aUndZeige(){ renderSchritt3a(); zeigeSchritt('3a'); }
+
+/* Kurs festschreiben — Missionen verlassen den Vorrat und leben im Kurs weiter */
+function setzeKurs(){
+  const d = deck();
+  const nimm = id => {
+    const i = d.vorrat.findIndex(e => e.id === id);
+    return i >= 0 ? d.vorrat.splice(i, 1)[0] : null;
+  };
+  const h = nimm(kr.hauptWahl);
+  if (!h){ renderSchritt3a(); zeigeSchritt('3a'); return; }
+  const schritt = (kr.schrittText || '').trim();
+
+  const alsMission = e => ({
+    id: e.id, titel: e.titel, bereich: e.bereich,
+    naechsterSchritt: e.naechsterSchritt || null,
+    faelligAm: e.faelligAm || null, erfuellt: false
+  });
+  const haupt = alsMission(h);
+  if (schritt) haupt.naechsterSchritt = schritt;
+
+  d.kurs = {
+    fuerDatum: kr.zielDatum,
+    gesetztAm: heuteISO(),
+    hauptmission: haupt,
+    begleitmissionen: kr.begleitWahl.map(nimm).filter(Boolean).map(alsMission),
+    routinenErledigt: []
+  };
+  speichere();
+  renderAbschluss();
+  zeigeSchritt('ende');
+}
+
+/* --- Abschluss: ruhiger Bestätigungsbildschirm; freitags das Rettungsboot --- */
+function renderAbschluss(){
+  const ziel = el('kr-abschluss');
+  const freitag = wochentagIndex(heuteISO()) === 4 && aktivesDeck() === 'privat';
+  const titelText = (aktivesDeck() === 'arbeit')
+    ? 'Wache übergeben. Feierabend, Captain.'
+    : 'Kurs gesetzt, Captain.';
+  ziel.innerHTML =
+    '<div class="kr-frage" style="margin-top:24px">' + titelText + '</div>' +
+    '<div class="kr-hinweis">Hauptmission für ' + TAGE_LANG[wochentagIndex(kr.zielDatum)] + ':<br>„' +
+      entk(deck().kurs.hauptmission.titel) + '“</div>' +
+    (freitag
+      ? '<div class="welle" style="margin-top:26px"></div>' +
+        '<p class="rb-text" style="text-align:center">Freitag — Zeit für das Rettungsboot. Logbuch sichern?</p>' +
+        '<button class="knopf-linie knopf-breit" id="btn-ende-export">Privatdeck sichern (JSON)</button>' +
+        '<div class="hinweis" id="ende-export-status" style="justify-content:center"></div>'
+      : '') +
+    '<div style="text-align:center;margin-top:26px"><button class="knopf" id="btn-ende-bruecke">Zur Brücke</button></div>';
+
+  const ex = el('btn-ende-export');
+  if (ex) ex.addEventListener('click', () => {
+    exportiere('privat');
+    el('ende-export-status').textContent = 'Logbuch gesichert.';
+  });
+  el('btn-ende-bruecke').addEventListener('click', () => zeigeAnsicht('bruecke'));
+}
+
+/* ============================================================
+   BORDROUTINEN VERWALTEN — pausieren statt löschen (Exportformat 4.3)
+   ============================================================ */
+const rForm = { typ: 'taeglich', tage: [], vorschlag: false };
+
+function oeffneRoutinen(){
+  el('routine-titel').value = '';
+  rForm.typ = 'taeglich'; rForm.tage = []; rForm.vorschlag = false;
+  renderRoutinenForm();
+  renderRoutinenListe();
+  zeigeAnsicht('routinen');
+}
+
+function renderRoutinenForm(){
+  el('rhythmus-wahl').querySelectorAll('button').forEach(b =>
+    b.classList.toggle('gewaehlt', b.dataset.typ === rForm.typ));
+  el('tage-zeile').hidden = (rForm.typ !== 'wochentage');
+  el('tage-wahl').innerHTML = TAGE_KURZ.map(t =>
+    '<button type="button" data-tag="' + t + '"' + (rForm.tage.includes(t) ? ' class="gewaehlt"' : '') + '>' + t + '</button>').join('');
+  el('tage-wahl').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    const i = rForm.tage.indexOf(b.dataset.tag);
+    if (i >= 0) rForm.tage.splice(i, 1); else rForm.tage.push(b.dataset.tag);
+    renderRoutinenForm();
+  }));
+  el('vorschlag-schalter').classList.toggle('erledigt', rForm.vorschlag);
+}
+
+function rhythmusText(r){
+  if (r.rhythmus.typ === 'taeglich') return 'täglich';
+  if (r.rhythmus.typ === 'wochentage') return (r.rhythmus.tage || []).join(' · ');
+  return '1× pro Woche';
+}
+
+function routineAnlegen(){
+  const titel = el('routine-titel').value.trim();
+  if (!titel) return;
+  if (rForm.typ === 'wochentage' && !rForm.tage.length) return;
+  const rhythmus = { typ: rForm.typ };
+  if (rForm.typ === 'wochentage'){
+    rhythmus.tage = TAGE_KURZ.filter(t => rForm.tage.includes(t));   // stabile Reihenfolge Mo–So
+  }
+  deck().routinen.push({ id: neueId(), titel, rhythmus, vorschlagswuerdig: rForm.vorschlag, aktiv: true });
+  speichere();
+  el('routine-titel').value = '';
+  rForm.tage = []; rForm.vorschlag = false;
+  renderRoutinenForm();
+  renderRoutinenListe();
+}
+
+function renderRoutinenListe(){
+  const ziel = el('routinen-liste');
+  const alle = deck().routinen;
+  if (!alle.length){
+    ziel.innerHTML = '<div class="leer-hinweis">Noch keine Routinen an Bord.</div>';
+    return;
+  }
+  ziel.innerHTML = alle.map(r =>
+    '<div class="verwaltung-zeile' + (r.aktiv ? '' : ' pausiert') + '">' +
+      '<svg class="vi-ikon" viewBox="0 0 24 24" style="width:16px;height:16px;stroke:var(--messing);fill:none;stroke-width:1.6;flex:none">' + ICON.uhr + '</svg>' +
+      '<div class="vz-text"><div class="vz-titel">' + entk(r.titel) + '</div>' +
+        '<div class="vz-meta">' + rhythmusText(r) + (r.vorschlagswuerdig ? ' · wird vorgeschlagen' : '') +
+        (r.aktiv ? '' : ' · pausiert') + '</div></div>' +
+      '<button class="mini-knopf" data-id="' + r.id + '">' + (r.aktiv ? 'Pausieren' : 'Aktivieren') + '</button>' +
+    '</div>').join('');
+  ziel.querySelectorAll('.mini-knopf').forEach(b => b.addEventListener('click', () => {
+    const r = deck().routinen.find(x => x.id === b.dataset.id);
+    if (r){ r.aktiv = !r.aktiv; speichere(); renderRoutinenListe(); }
+  }));
+}
+
+/* ============================================================
+   TERMINE VERWALTEN — v0.1: manuelle Quelle, gleicher Parser
+   ============================================================ */
+let terminParse = null;
+
+function oeffneTermine(){
+  el('termin-eingabe').value = '';
+  terminParse = null;
+  el('termin-hinweis').innerHTML = '';
+  el('btn-termin-speichern').hidden = true;
+  renderTermineListe();
+  renderFunkBlock();
+  zeigeAnsicht('termine');
+}
+
+/* Funkverbindung einrichten — nur auf dem Privatdeck (Dienstdaten bleiben auf dem Gerät) */
+function renderFunkBlock(){
+  const block = el('funk-block');
+  if (aktivesDeck() !== 'privat'){ block.hidden = true; return; }
+  block.hidden = false;
+  const kal = deck().settings.kalender;
+  el('funk-url').value = kal.scriptUrl || '';
+  el('btn-funk-trennen').hidden = (kal.typ !== 'google-apps-script');
+  const st = el('funk-status');
+  st.classList.remove('warnung');
+  st.textContent = (kal.typ === 'google-apps-script') ? 'Funkverbindung eingerichtet.' : '';
+}
+function funkVerbinden(){
+  const url = el('funk-url').value.trim();
+  const st = el('funk-status');
+  st.classList.remove('warnung');
+  if (!url.startsWith('https://script.google.com/')){
+    st.classList.add('warnung');
+    st.textContent = 'Das sieht nicht nach einer Apps-Script-Adresse aus (https://script.google.com/…).';
+    return;
+  }
+  const kal = zustand.decks.privat.settings.kalender;
+  kal.typ = 'google-apps-script';
+  kal.scriptUrl = url;
+  speichere();
+  st.textContent = 'Rufe Termine ab …';
+  aktualisiereKalender(true).then(ok => {
+    if (ok){
+      st.textContent = 'Verbunden — ' + zustand.decks.privat.terminCache.termine.length +
+        ' Termine der nächsten 14 Tage empfangen.';
+      el('btn-funk-trennen').hidden = false;
+    } else {
+      st.classList.add('warnung');
+      st.textContent = 'Kein Empfang. Adresse prüfen — und ob das Script als Web-App („Zugriff: Jeder“) bereitgestellt ist.';
+    }
+    renderTermineListe();
+  });
+}
+function funkTrennen(){
+  const kal = zustand.decks.privat.settings.kalender;
+  kal.typ = 'manuell';
+  delete kal.scriptUrl;
+  zustand.decks.privat.terminCache = { stand: null, letzterAbruf: 0, gestoert: false, termine: [] };
+  speichere();
+  renderFunkBlock();
+  renderTermineListe();
+  el('funk-status').textContent = 'Funkverbindung getrennt — der Kalender bleibt bei Google.';
+}
+
+function aktualisiereTerminParse(){
+  const text = el('termin-eingabe').value.trim();
+  const hin = el('termin-hinweis'), knopf = el('btn-termin-speichern');
+  hin.classList.remove('warnung');
+  if (!text){ hin.innerHTML = ''; knopf.hidden = true; terminParse = null; return; }
+  const p = parseEingabe(text);
+  terminParse = p;
+  if (!p.datum){
+    hin.classList.add('warnung');
+    hin.textContent = 'Ein Datum fehlt noch — z. B. „Sa“, „morgen“ oder „15.7.“';
+    knopf.hidden = true;
+    return;
+  }
+  hin.textContent = 'Erkannt: ' + TAGE_LANG[wochentagIndex(p.datum)] + ', ' +
+    parseISO(p.datum).getDate() + '. ' + MONATE[parseISO(p.datum).getMonth()] +
+    (p.uhrzeit ? ' · ' + p.uhrzeit : ' · ganztägig');
+  knopf.hidden = !p.titel;
+}
+
+function terminSpeichern(){
+  const p = terminParse;
+  if (!p || !p.titel || !p.datum) return;
+  deck().termine.push({ id: neueId(), titel: p.titel, ort: '', datum: p.datum, uhrzeit: p.uhrzeit || null });
+  speichere();
+  el('termin-eingabe').value = '';
+  aktualisiereTerminParse();
+  el('termin-hinweis').textContent = 'Eingetragen.';
+  renderTermineListe();
+}
+
+function renderTermineListe(){
+  const ziel = el('termine-liste');
+  const heute = heuteISO();
+  const d = deck();
+  const eigene = d.termine.filter(t => t.datum >= heute).map(t => Object.assign({ eigen: true }, t));
+  const funk = (aktivesDeck() === 'privat' && d.settings.kalender.typ === 'google-apps-script')
+    ? d.terminCache.termine.filter(t => t.datum >= heute)
+    : [];
+  const kommende = eigene.concat(funk)
+    .sort((a, b) => (a.datum + (a.uhrzeit || '99')).localeCompare(b.datum + (b.uhrzeit || '99')));
+  if (!kommende.length){
+    ziel.innerHTML = '<div class="leer-hinweis">Keine kommenden Termine.</div>';
+    return;
+  }
+  ziel.innerHTML = kommende.map(t =>
+    '<div class="verwaltung-zeile">' +
+      '<div class="t-zeit" style="width:auto;font-size:18px;flex:none">' + kurzDatum(t.datum) +
+        (t.uhrzeit ? ' · ' + t.uhrzeit : '') + '</div>' +
+      '<div class="vz-text"><div class="vz-titel">' + entk(t.titel) + '</div>' +
+      '<div class="vz-meta">' + (t.eigen ? (t.ort ? entk(t.ort) : 'eigener Eintrag') : 'Google-Kalender') + '</div></div>' +
+      (t.eigen ? '<button class="mini-knopf" data-id="' + t.id + '">Streichen</button>' : '') +
+    '</div>').join('');
+  ziel.querySelectorAll('.mini-knopf').forEach(b => b.addEventListener('click', () => {
+    deck().termine = deck().termine.filter(x => x.id !== b.dataset.id);
+    speichere(); renderTermineListe();
+  }));
+}
+
+/* ============================================================
+   RETTUNGSBOOT — Export/Import nach Formatdokument v1.0
+   (+ additive Felder termine, kurs, routinenHeute — Freigabe Punkt 4)
+   ============================================================ */
+function deckExport(d){
+  return {
+    settings: d.settings, vorrat: d.vorrat, routinen: d.routinen, logbuch: d.logbuch,
+    briefingStatus: { letzteVarianten: d.briefingStatus.letzteVarianten,
+                      selteneZusaetze: d.briefingStatus.selteneZusaetze },
+    termine: d.termine, kurs: d.kurs, routinenHeute: d.routinenHeute
+    /* terminCache fehlt bewusst: abgeleitete Fremddaten (Exportformat, Grundsatz 2) */
+  };
+}
+
+function exportiere(auswahl){
+  auswahl = auswahl || 'privat';
+  const mitPrivat = (auswahl !== 'arbeit');
+  const mitArbeit = (auswahl !== 'privat') && !!zustand.decks.arbeit;
+  const daten = {
+    format: FORMAT_NAME,
+    formatVersion: FORMAT_VERSION,
+    exportedAt: isoMitZone(),
+    appVersion: APP_VERSION,
+    decks: {
+      privat: mitPrivat ? deckExport(zustand.decks.privat) : null,
+      arbeit: mitArbeit ? deckExport(zustand.decks.arbeit) : null
+    }
+  };
+  const namensteil = (mitPrivat && mitArbeit) ? '' : (mitArbeit ? '_arbeit' : '_privat');
+  const blob = new Blob([JSON.stringify(daten, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'logbuch_export' + namensteil + '_' + heuteISO() + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+
+/* Sicherungsknöpfe: erst mit bezogenem Arbeitsdeck erscheinen die drei Optionen */
+function renderRettungsboot(){
+  const feld = el('export-knoepfe');
+  const arbeitDa = !!zustand.decks.arbeit;
+  feld.innerHTML = arbeitDa
+    ? '<button class="knopf knopf-breit" data-auswahl="beide">Beide Decks sichern (JSON)</button>' +
+      '<button class="knopf-linie knopf-breit" data-auswahl="privat">Nur Privatdeck</button>' +
+      '<button class="knopf-linie knopf-breit" data-auswahl="arbeit">Nur Arbeitsdeck</button>'
+    : '<button class="knopf knopf-breit" data-auswahl="privat">Privatdeck sichern (JSON)</button>';
+  el('export-warnung').hidden = !arbeitDa;
+  feld.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    exportiere(b.dataset.auswahl);
+    const st = el('rb-status');
+    st.classList.remove('warnung');
+    st.textContent = 'Logbuch gesichert.';
+  }));
+}
+
+let importDaten = null;
+
+function leseImportDatei(datei){
+  const status = el('rb-status');
+  status.classList.remove('warnung');
+  const leser = new FileReader();
+  leser.onload = () => {
+    try {
+      const d = JSON.parse(leser.result);
+      if (d.format !== FORMAT_NAME || !d.decks || (!d.decks.privat && !d.decks.arbeit)){
+        throw new Error('Kein Logbuch-Export.');
+      }
+      if ((d.formatVersion || 1) > FORMAT_VERSION){
+        throw new Error('Die Datei stammt aus einer neueren App-Version.');
+      }
+      importDaten = d;
+      const zeilen = [];
+      for (const name of ['privat', 'arbeit']){
+        const p = d.decks[name];
+        if (!p) continue;
+        const logbuchInfo = (p.logbuch && p.logbuch.length)
+          ? 'Logbuch seit ' + kurzDatum(p.logbuch.slice().sort((a, b) => a.datum.localeCompare(b.datum))[0].datum)
+          : 'Logbuch leer';
+        zeilen.push((name === 'privat' ? 'Privatdeck' : 'Arbeitsdeck') + ': ' +
+          (p.vorrat || []).length + ' Vorratseinträge, ' + (p.routinen || []).length + ' Routinen, ' +
+          (p.termine || []).length + ' Termine, ' + logbuchInfo + '.');
+      }
+      el('import-zusammenfassung').textContent = zeilen.join(' ') +
+        ' (Exportiert ' + (d.exportedAt || '').slice(0, 10) + '.) Ersetzen überschreibt die enthaltenen Decks ' +
+        'vollständig; Zusammenführen ergänzt und aktualisiert anhand der IDs. Nicht enthaltene Decks bleiben unberührt.';
+      el('import-overlay').hidden = false;
+    } catch(e){
+      status.classList.add('warnung');
+      status.textContent = 'Diese Datei lässt sich nicht einlesen: ' + e.message;
+    }
+  };
+  leser.onerror = () => {
+    status.classList.add('warnung');
+    status.textContent = 'Die Datei konnte nicht gelesen werden.';
+  };
+  leser.readAsText(datei);
+}
+
+function importErsetzen(){
+  for (const name of ['privat', 'arbeit']){
+    if (!importDaten.decks[name]) continue;             // Teilimport: fehlendes Deck bleibt unberührt
+    zustand.decks[name] = vervollstaendigeDeck(importDaten.decks[name]);
+    zustand.decks[name].briefingStatus.heutigesBriefing = null;
+  }
+  importAbschliessen('Wiederhergestellt. Willkommen zurück, Captain.');
+}
+
+function importMergen(){
+  for (const name of ['privat', 'arbeit']){
+    if (!importDaten.decks[name]) continue;
+    const quelle = vervollstaendigeDeck(importDaten.decks[name]);
+    if (!zustand.decks[name]){ zustand.decks[name] = quelle; continue; }
+    const ziel = zustand.decks[name];
+    const nachId = (zielListe, quellListe) => {
+      for (const q of quellListe){
+        const i = zielListe.findIndex(z => z.id === q.id);
+        if (i >= 0) zielListe[i] = q; else zielListe.push(q);   // bekannte ID ersetzt, nie dupliziert
+      }
+    };
+    nachId(ziel.vorrat, quelle.vorrat);
+    nachId(ziel.routinen, quelle.routinen);
+    nachId(ziel.termine, quelle.termine);
+    for (const q of quelle.logbuch){                             // Logbuch: Datum ersetzt Datum
+      ziel.logbuch = ziel.logbuch.filter(e => e.datum !== q.datum);
+      ziel.logbuch.push(q);
+    }
+    ziel.logbuch.sort((a, b) => a.datum.localeCompare(b.datum));
+    if (!ziel.kurs && quelle.kurs && quelle.kurs.fuerDatum >= heuteISO()) ziel.kurs = quelle.kurs;
+  }
+  importAbschliessen('Zusammengeführt. Alles an Bord, Captain.');
+}
+
+function importAbschliessen(meldung){
+  importDaten = null;
+  el('import-overlay').hidden = true;
+  el('import-datei').value = '';
+  speichere();
+  tagesabgleich();
+  renderRettungsboot();
+  const status = el('rb-status');
+  status.classList.remove('warnung');
+  status.textContent = meldung;
+}
+
+/* ============================================================
+   APP — Ansichtswechsel, Tagesabgleich, Verdrahtung, Start
+   ============================================================ */
+function zeigeAnsicht(name){
+  ['bruecke','kartenraum','routinen','termine','rettungsboot'].forEach(n => {
+    el('ansicht-' + n).hidden = (n !== name);
+  });
+  window.scrollTo(0, 0);
+  if (name === 'bruecke'){ renderBruecke(); aktualisiereKalender(false); }
+  if (name === 'rettungsboot') renderRettungsboot();
+}
+
+/* Horizonte datierter Einträge wandern automatisch mit dem Kalender (Lastenheft 6) */
+function tagesabgleich(){
+  for (const name of ['privat', 'arbeit']){
+    const d = zustand.decks[name];
+    if (d) d.vorrat.forEach(e => { if (e.faelligAm) e.horizont = horizontFuerDatum(e.faelligAm); });
+  }
+  speichere();
+}
+
+function verdrahte(){
+  el('btn-kartenraum').addEventListener('click', oeffneKartenraum);
+  el('btn-kr-schliessen').addEventListener('click', () => zeigeAnsicht('bruecke'));
+  el('btn-s2-weiter').addEventListener('click', betreteSchritt3a);
+
+  el('vorrat-eingabe').addEventListener('input', aktualisiereParse);
+  el('vorrat-eingabe').addEventListener('keydown', ev => { if (ev.key === 'Enter') speichereEintrag(); });
+  el('btn-eintrag-speichern').addEventListener('click', speichereEintrag);
+
+  el('btn-zu-routinen').addEventListener('click', oeffneRoutinen);
+  el('btn-zu-terminen').addEventListener('click', oeffneTermine);
+  el('btn-zu-rettungsboot').addEventListener('click', () => zeigeAnsicht('rettungsboot'));
+
+  // Verwaltungen kehren in den Kartenraum (Schritt 2) zurück — dort ist ihr Ort
+  const zurueckZumVorrat = () => {
+    if (kr){ zeigeAnsicht('kartenraum'); renderVorratListe(); zeigeSchritt(2); }
+    else zeigeAnsicht('bruecke');
+  };
+  el('btn-r-zurueck').addEventListener('click', zurueckZumVorrat);
+  el('btn-t-zurueck').addEventListener('click', zurueckZumVorrat);
+  el('btn-rb-zurueck').addEventListener('click', zurueckZumVorrat);
+
+  el('rhythmus-wahl').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    rForm.typ = b.dataset.typ;
+    renderRoutinenForm();
+  }));
+  el('vorschlag-schalter').addEventListener('click', () => {
+    rForm.vorschlag = !rForm.vorschlag;
+    renderRoutinenForm();
+  });
+  el('btn-routine-anlegen').addEventListener('click', routineAnlegen);
+
+  el('termin-eingabe').addEventListener('input', aktualisiereTerminParse);
+  el('termin-eingabe').addEventListener('keydown', ev => { if (ev.key === 'Enter') terminSpeichern(); });
+  el('btn-termin-speichern').addEventListener('click', terminSpeichern);
+
+  el('deck-wechsel').addEventListener('click', wechsleDeck);
+  el('btn-funk-verbinden').addEventListener('click', funkVerbinden);
+  el('btn-funk-trennen').addEventListener('click', funkTrennen);
+  el('btn-import').addEventListener('click', () => el('import-datei').click());
+  el('import-datei').addEventListener('change', ev => {
+    if (ev.target.files && ev.target.files[0]) leseImportDatei(ev.target.files[0]);
+  });
+  el('btn-import-ersetzen').addEventListener('click', importErsetzen);
+  el('btn-import-mergen').addEventListener('click', importMergen);
+  el('btn-import-abbrechen').addEventListener('click', () => {
+    importDaten = null;
+    el('import-overlay').hidden = true;
+    el('import-datei').value = '';
+  });
+
+  el('flagge-overlay').addEventListener('click', () => { el('flagge-overlay').hidden = true; });
+}
+
+function init(){
+  ladeZustand();
+  tagesabgleich();
+  verdrahte();
+  zeigeAnsicht('bruecke');
+  aktualisiereKalender(false);                       // Funkverbindung still im Hintergrund
+  if ('serviceWorker' in navigator && location.protocol === 'https:'){
+    navigator.serviceWorker.register('sw.js').catch(() => {});   // Offline-Rettung; lokal ohne Wirkung
+  }
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
