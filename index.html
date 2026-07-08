@@ -302,6 +302,16 @@
     font-style:italic;font-family:var(--serif)}
   .funk-block{margin-top:30px;border-top:1px dashed rgba(217,184,126,.3);padding-top:20px}
 
+  /* Das Netz: Einhol-Knopf und Fang-Vorschau */
+  .netz-zeile{margin:20px 0 2px;text-align:center}
+  .knopf-linie svg{width:16px;height:16px;stroke:var(--messing);fill:none;stroke-width:1.6;
+    vertical-align:-3px;margin-right:7px}
+  .netz-liste{max-height:280px;overflow-y:auto;margin:2px 0 10px}
+  .netz-fang{display:flex;align-items:center;gap:10px;padding:8px 4px;
+    border-bottom:1px dashed rgba(217,184,126,.25);font-size:15.5px;font-weight:500;color:var(--creme)}
+  .netz-fang:last-child{border-bottom:none}
+  .netz-fang svg{width:14px;height:14px;stroke:var(--messing);fill:none;stroke-width:1.6;flex:none;opacity:.8}
+
   /* Installiert auf dem Home-Bildschirm: Platz für die iOS-Statusleiste */
   @media (display-mode: standalone){ body{padding-top:env(safe-area-inset-top)} }
 
@@ -380,6 +390,11 @@
       <div class="hinweis" id="parse-hinweis"></div>
       <div class="bereich-wahl" id="bereich-wahl"></div>
       <button class="knopf knopf-breit" id="btn-eintrag-speichern" hidden></button>
+      <div class="netz-zeile">
+        <button class="knopf-linie" id="btn-netz"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M14.8 14.8 21 21M10 3.5v13M3.5 10h13M5.4 5.4l9.2 9.2M14.6 5.4l-9.2 9.2"/></svg>Netz einholen</button>
+        <div class="hinweis" id="netz-status" style="justify-content:center"></div>
+      </div>
+      <div class="kursangebot" id="netz-vorschau" hidden></div>
       <div id="vorrat-liste"></div>
       <div class="kr-fuss">
         <span>
@@ -511,7 +526,7 @@
 /* ============================================================
    KONSTANTEN — Daten strikt vom Code getrennt
    ============================================================ */
-const APP_VERSION = '0.2.0';
+const APP_VERSION = '0.3.1';
 const FORMAT_NAME = 'logbuch-des-kapitaens';
 const FORMAT_VERSION = 1;                        // additiv versioniert (Exportformat, Grundsatz 4)
 const SPEICHER_SCHLUESSEL = 'logbuch-des-kapitaens';
@@ -550,7 +565,8 @@ const ICON = {
   wellen:  '<path d="M3 17c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 6 0M3 12c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 6 0"/>',
   flagge:  '<path d="M6 21V4m0 1h11l-3 3.5 3 3.5H6"/>',
   fernrohr:'<path d="M4 20l3.2-3.2M6.6 17.4l2.2-2.2 3.4 3.4-2.2 2.2zM10.3 13.7l4.6-4.6 3.4 3.4-4.6 4.6zM16.4 6.1l1.1-1.1a1.7 1.7 0 0 1 2.4 2.4l-1.1 1.1z"/>',
-  wechsel: '<path d="M7 4 3.5 7.5 7 11M3.5 7.5H16M17 13l3.5 3.5L17 20M20.5 16.5H8"/>'
+  wechsel: '<path d="M7 4 3.5 7.5 7 11M3.5 7.5H16M17 13l3.5 3.5L17 20M20.5 16.5H8"/>',
+  netz:    '<circle cx="10" cy="10" r="6.5"/><path d="M14.8 14.8 21 21M10 3.5v13M3.5 10h13M5.4 5.4l9.2 9.2M14.6 5.4l-9.2 9.2"/>'
 };
 function icon(name){ return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (ICON[name]||ICON.anker) + '</svg>'; }
 function bereichVon(id){ return BEREICHE.find(b => b.id === id) || BEREICHE[0]; }
@@ -690,6 +706,7 @@ function leeresDeck(name){
     kurs: null,                                   // additives Feld (Freigabe Punkt 4)
     routinenHeute: { datum: heuteISO(), erledigt: [] },  // Routinen-Haken ohne gesetzten Kurs
     kursAngebot: { abgelehntAm: null },           // „Kurs für heute noch setzen?“ nur 1× pro Tag
+    netzGedaechtnis: [],                          // zuletzt übernommener Netzinhalt (Erinnerungen-Import, v0.3)
     terminCache: { stand: null, letzterAbruf: 0, gestoert: false, termine: [] }  // Fremddatenkopie — nie im Rettungsboot
   };
 }
@@ -1548,6 +1565,10 @@ const eingabe = { parse: null, bereich: 'allgemein', typUeberschrieben: null };
 function renderSchritt2(){
   el('vorrat-eingabe').value = '';
   eingabe.parse = null; eingabe.typUeberschrieben = null;
+  el('netz-status').textContent = '';
+  el('netz-status').classList.remove('warnung');
+  el('netz-vorschau').hidden = true;
+  if (kr) kr.netz = null;
   aktualisiereParse();
   renderBereichWahl();
   renderVorratListe();
@@ -1659,6 +1680,123 @@ function renderVorratListe(){
     }
     speichere(); renderVorratListe();
   }));
+}
+
+/* ============================================================
+   DAS NETZ — Fänge aus der Erinnerungen-App einholen (v0.3).
+   Reiner Text, ohne Fristen und Bereiche (Entscheidung des Captains).
+   Dopplungsschutz über das selbstreinigende Gedächtnis: gemerkt ist
+   stets der zuletzt übernommene Netzinhalt; was im nächsten Netz
+   fehlt (in den Erinnerungen abgehakt), verliert den Merker von
+   selbst. So kommt gleicher Wortlaut später wieder durch, und das
+   Gedächtnis wächst nie an.
+   ============================================================ */
+const NETZ_KENNUNG = 'LOGBUCH-NETZ';
+
+function normalisiereFang(s){ return String(s).replace(/\s+/g, ' ').trim().toLowerCase(); }
+
+function deckLabel(name){ return name === 'arbeit' ? 'Arbeitsdeck' : 'Privatdeck'; }
+
+function netzEinholen(){
+  const st = el('netz-status');
+  st.classList.remove('warnung');
+  if (!navigator.clipboard || !navigator.clipboard.readText){
+    st.classList.add('warnung');
+    st.textContent = 'Die Zwischenablage ist hier nicht erreichbar (HTTPS nötig).';
+    return;
+  }
+  navigator.clipboard.readText().then(text => {
+    const zeilen = String(text || '').split(/\r?\n/).map(z => z.trim()).filter(Boolean);
+    const kopf = zeilen.length ? zeilen[0].toUpperCase().split(/\s+/) : [];
+    if (kopf[0] !== NETZ_KENNUNG){
+      st.classList.add('warnung');
+      st.textContent = 'Das sieht nicht nach einem Netz aus — erst in Kurzbefehle „Netz auswerfen“.';
+      return;
+    }
+    // Ziel-Deck aus der Kennzeile: PRIVAT / ARBEIT — ohne Zusatz zielt das Netz aufs aktive Deck
+    let deckName = aktivesDeck();
+    if (kopf[1] === 'PRIVAT')      deckName = 'privat';
+    else if (kopf[1] === 'ARBEIT') deckName = 'arbeit';
+    else if (kopf[1]){
+      st.classList.add('warnung');
+      st.textContent = 'Unbekanntes Ziel-Deck in der Kennzeile: „' + entk(kopf[1]) + '“.';
+      return;
+    }
+    if (deckName === 'arbeit' && !zustand.decks.arbeit){
+      zustand.decks.arbeit = leeresDeck('Arbeit');   // das erste Arbeits-Netz bezieht das Deck
+    }
+    const ziel = zustand.decks[deckName];
+    // Netzinhalt, innerhalb des Netzes selbst entdoppelt
+    const gesehen = new Set(), netz = [];
+    for (const f of zeilen.slice(1)){
+      const n = normalisiereFang(f);
+      if (!gesehen.has(n)){ gesehen.add(n); netz.push(f); }
+    }
+    // Gedächtnis und Dublettenschutz arbeiten stets im Ziel-Deck
+    const gedaechtnis = new Set(ziel.netzGedaechtnis.map(normalisiereFang));
+    const imVorrat = new Set(ziel.vorrat.map(e => normalisiereFang(e.titel)));
+    const neue = netz.filter(f => {
+      const n = normalisiereFang(f);
+      return !gedaechtnis.has(n) && !imVorrat.has(n);
+    });
+    if (!kr) kr = {};
+    kr.netz = { alle: netz, neue, deckName };
+    if (!neue.length){
+      ziel.netzGedaechtnis = netz.slice();       // stilles Reinigen: Abgehaktes verliert den Merker
+      speichere();
+      el('netz-vorschau').hidden = true;
+      st.textContent = netz.length
+        ? 'Netz eingeholt (' + deckLabel(deckName) + ') — nichts Neues darin.'
+        : 'Das Netz war leer.';
+      return;
+    }
+    st.textContent = '';
+    renderNetzVorschau();
+  }).catch(() => {
+    st.classList.add('warnung');
+    st.textContent = 'Kein Zugriff auf die Zwischenablage — „Einfügen erlauben“ antippen und erneut versuchen.';
+  });
+}
+
+function renderNetzVorschau(){
+  const feld = el('netz-vorschau');
+  const n = kr.netz;
+  feld.innerHTML =
+    '<p>Im Netz: ' + n.alle.length + (n.alle.length === 1 ? ' Fang' : ' Fänge') +
+      ' für das <b>' + deckLabel(n.deckName) + '</b>, davon <b>' + n.neue.length + ' neu</b>:</p>' +
+    '<div class="netz-liste">' + n.neue.map(f =>
+      '<div class="netz-fang"><svg viewBox="0 0 24 24">' + ICON.netz + '</svg>' + entk(f) + '</div>').join('') + '</div>' +
+    '<div class="aktionspaar">' +
+      '<button class="gewaehlt a-erledigt" id="btn-netz-uebernehmen">Übernehmen</button>' +
+      '<button class="gewaehlt a-vorrat" id="btn-netz-verwerfen">Verwerfen</button>' +
+    '</div>';
+  feld.hidden = false;
+  el('btn-netz-uebernehmen').addEventListener('click', netzUebernehmen);
+  el('btn-netz-verwerfen').addEventListener('click', netzVerwerfen);
+}
+
+function netzUebernehmen(){
+  const n = kr && kr.netz;
+  if (!n) return;
+  const ziel = zustand.decks[n.deckName];
+  if (!ziel) return;
+  for (const f of n.neue){
+    ziel.vorrat.push({ id: neueId(), titel: f, bereich: 'allgemein',
+                       horizont: 'woche', erstelltAm: isoMitZone() });
+  }
+  ziel.netzGedaechtnis = n.alle.slice();         // Gedächtnis = übernommener Netzinhalt
+  kr.netz = null;
+  speichere();
+  el('netz-vorschau').hidden = true;
+  el('netz-status').textContent = n.neue.length + (n.neue.length === 1 ? ' Fang' : ' Fänge') +
+    ' für das ' + deckLabel(n.deckName) + ' an Bord.';
+  if (n.deckName === aktivesDeck()) renderVorratListe();
+}
+
+function netzVerwerfen(){                        // Gedächtnis bleibt unangetastet — nichts geht verloren
+  kr.netz = null;
+  el('netz-vorschau').hidden = true;
+  el('netz-status').textContent = '';
 }
 
 /* --- Schritt 3a: erst nur EINE Frage — die Hauptmission --- */
@@ -2028,7 +2166,8 @@ function deckExport(d){
     settings: d.settings, vorrat: d.vorrat, routinen: d.routinen, logbuch: d.logbuch,
     briefingStatus: { letzteVarianten: d.briefingStatus.letzteVarianten,
                       selteneZusaetze: d.briefingStatus.selteneZusaetze },
-    termine: d.termine, kurs: d.kurs, routinenHeute: d.routinenHeute
+    termine: d.termine, kurs: d.kurs, routinenHeute: d.routinenHeute,
+    netzGedaechtnis: d.netzGedaechtnis            // nötig, damit nach Wiederherstellung keine Dubletten hereinspülen
     /* terminCache fehlt bewusst: abgeleitete Fremddaten (Exportformat, Grundsatz 2) */
   };
 }
@@ -2195,6 +2334,7 @@ function verdrahte(){
   el('vorrat-eingabe').addEventListener('keydown', ev => { if (ev.key === 'Enter') speichereEintrag(); });
   el('btn-eintrag-speichern').addEventListener('click', speichereEintrag);
 
+  el('btn-netz').addEventListener('click', netzEinholen);
   el('btn-zu-routinen').addEventListener('click', oeffneRoutinen);
   el('btn-zu-terminen').addEventListener('click', oeffneTermine);
   el('btn-zu-rettungsboot').addEventListener('click', () => zeigeAnsicht('rettungsboot'));
