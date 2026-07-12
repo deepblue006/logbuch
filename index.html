@@ -535,7 +535,7 @@
 /* ============================================================
    KONSTANTEN — Daten strikt vom Code getrennt
    ============================================================ */
-const APP_VERSION = '0.3.2';
+const APP_VERSION = '0.3.3';
 const FORMAT_NAME = 'logbuch-des-kapitaens';
 const FORMAT_VERSION = 1;                        // additiv versioniert (Exportformat, Grundsatz 4)
 const SPEICHER_SCHLUESSEL = 'logbuch-des-kapitaens';
@@ -2068,12 +2068,32 @@ function renderRoutinenListe(){
       '<div class="vz-text"><div class="vz-titel">' + entk(r.titel) + '</div>' +
         '<div class="vz-meta">' + rhythmusText(r) + (r.vorschlagswuerdig ? ' · wird vorgeschlagen' : '') +
         (r.aktiv ? '' : ' · pausiert') + '</div></div>' +
-      '<button class="mini-knopf" data-id="' + r.id + '">' + (r.aktiv ? 'Pausieren' : 'Aktivieren') + '</button>' +
+      // Zwei-Schritt statt Bestätigungsdialog: Streichen gibt es erst im pausierten Zustand
+      (r.aktiv ? '' : '<button class="mini-knopf" data-tu="streichen" data-id="' + r.id + '">Streichen</button>') +
+      '<button class="mini-knopf" data-tu="schalten" data-id="' + r.id + '">' + (r.aktiv ? 'Pausieren' : 'Aktivieren') + '</button>' +
     '</div>').join('');
   ziel.querySelectorAll('.mini-knopf').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.tu === 'streichen'){ routineStreichen(b.dataset.id); return; }
     const r = deck().routinen.find(x => x.id === b.dataset.id);
     if (r){ r.aktiv = !r.aktiv; speichere(); renderRoutinenListe(); }
   }));
+}
+
+/* Routine endgültig streichen (nur aus dem pausierten Zustand heraus).
+   Die Logbuch-Historie bleibt unangetastet; nur heutige Haken werden bereinigt. */
+function routineStreichen(id){
+  const d = deck();
+  const r = d.routinen.find(x => x.id === id);
+  if (!r || r.aktiv) return;                       // aktive Routinen sind nicht streichbar
+  d.routinen = d.routinen.filter(x => x.id !== id);
+  if (d.routinenHeute && d.routinenHeute.erledigt){
+    d.routinenHeute.erledigt = d.routinenHeute.erledigt.filter(x => x !== id);
+  }
+  if (d.kurs && d.kurs.routinenErledigt){
+    d.kurs.routinenErledigt = d.kurs.routinenErledigt.filter(x => x !== id);
+  }
+  speichere();
+  renderRoutinenListe();
 }
 
 /* ============================================================
