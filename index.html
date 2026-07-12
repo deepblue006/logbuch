@@ -302,6 +302,15 @@
     font-style:italic;font-family:var(--serif)}
   .funk-block{margin-top:30px;border-top:1px dashed rgba(217,184,126,.3);padding-top:20px}
 
+  /* Etikett ändern: tippbares Bereichs-Symbol am Vorratseintrag */
+  .vi-ikon-knopf{background:none;border:none;padding:8px;margin:-8px 0 -8px -8px;
+    flex:none;border-radius:8px;display:flex;align-items:center}
+  .vi-ikon-knopf svg{width:16px;height:16px;stroke:var(--messing);fill:none;stroke-width:1.6;opacity:.85}
+  .vi-ikon-knopf.offen{background:rgba(217,184,126,.14)}
+  .vorrat-bereichswahl{margin:-2px 0 10px;padding:8px 8px 2px;
+    border:1px dashed rgba(217,184,126,.4);border-radius:10px;background:rgba(217,184,126,.04)}
+  .vorrat-bereichswahl .bereich-wahl{margin:2px 0 4px}
+
   /* Das Netz: Einhol-Knopf und Fang-Vorschau */
   .netz-zeile{margin:20px 0 2px;text-align:center}
   .knopf-linie svg{width:16px;height:16px;stroke:var(--messing);fill:none;stroke-width:1.6;
@@ -526,7 +535,7 @@
 /* ============================================================
    KONSTANTEN — Daten strikt vom Code getrennt
    ============================================================ */
-const APP_VERSION = '0.3.1';
+const APP_VERSION = '0.3.2';
 const FORMAT_NAME = 'logbuch-des-kapitaens';
 const FORMAT_VERSION = 1;                        // additiv versioniert (Exportformat, Grundsatz 4)
 const SPEICHER_SCHLUESSEL = 'logbuch-des-kapitaens';
@@ -1569,6 +1578,7 @@ function renderSchritt2(){
   el('netz-status').classList.remove('warnung');
   el('netz-vorschau').hidden = true;
   if (kr) kr.netz = null;
+  bereichWahlOffen = null;
   aktualisiereParse();
   renderBereichWahl();
   renderVorratListe();
@@ -1643,6 +1653,8 @@ function speichereEintrag(){
   hin.textContent = 'Eingetragen.';
 }
 
+let bereichWahlOffen = null;   // Eintrag, dessen Etikett gerade zur Wahl aufgeklappt ist
+
 function renderVorratListe(){
   tagesabgleich();
   const ziel = el('vorrat-liste');
@@ -1654,6 +1666,7 @@ function renderVorratListe(){
   })).filter(g => g.eintraege.length);
 
   if (!gruppen.length){
+    bereichWahlOffen = null;
     ziel.innerHTML = '<div class="leer-hinweis" style="margin-top:22px">Der Vorrat ist leer — freie Ladefläche.</div>';
     return;
   }
@@ -1661,25 +1674,53 @@ function renderVorratListe(){
     '<div class="vorrat-gruppe"><h3>' + g.h.name + '<span class="linie"></span></h3>' +
     g.eintraege.map(e =>
       '<div class="vorrat-item">' +
-        '<svg class="vi-ikon" viewBox="0 0 24 24">' + ICON[bereichVon(e.bereich).ikon] + '</svg>' +
+        '<button class="vi-ikon-knopf' + (bereichWahlOffen === e.id ? ' offen' : '') + '"' +
+          ' data-tu="bereich" data-id="' + e.id + '" title="Lebensbereich ändern" aria-label="Lebensbereich ändern">' +
+          '<svg viewBox="0 0 24 24">' + ICON[bereichVon(e.bereich).ikon] + '</svg></button>' +
         '<div class="vi-text"><div class="vi-titel">' + entk(e.titel) + '</div>' +
           '<div class="vi-meta">' + bereichVon(e.bereich).name +
           (e.faelligAm ? ' · fällig ' + kurzDatum(e.faelligAm) : '') + '</div></div>' +
         (e.faelligAm ? '' : '<button class="mini-knopf" data-tu="schieben" data-id="' + e.id + '">Verschieben</button>') +
         '<button class="mini-knopf" data-tu="streichen" data-id="' + e.id + '">Streichen</button>' +
-      '</div>').join('') + '</div>').join('');
+      '</div>' +
+      // Ein Tipp aufs Symbol klappt die vertraute Sechser-Reihe auf — gleiche Geste wie beim Anlegen
+      (bereichWahlOffen === e.id
+        ? '<div class="vorrat-bereichswahl"><div class="bereich-wahl">' + BEREICHE.map(b =>
+            '<button type="button" data-tu="etikett" data-id="' + e.id + '" data-bereich="' + b.id + '"' +
+            (b.id === e.bereich ? ' class="gewaehlt"' : '') + '>' +
+            '<span class="bw-ring">' + icon(b.ikon) + '</span><span class="bw-name">' + b.name + '</span></button>').join('') +
+          '</div></div>'
+        : '')
+    ).join('') + '</div>').join('');
 
   ziel.querySelectorAll('.mini-knopf').forEach(b => b.addEventListener('click', () => {
     const d = deck(), e = d.vorrat.find(x => x.id === b.dataset.id);
     if (!e) return;
     if (b.dataset.tu === 'streichen'){
       d.vorrat = d.vorrat.filter(x => x.id !== e.id);       // Wisch links im Lastenheft = Streichen
+      if (bereichWahlOffen === e.id) bereichWahlOffen = null;
     } else {
       const reihe = ['woche', 'monat', 'reise'];             // Wisch rechts = Horizont wechseln
       e.horizont = reihe[(reihe.indexOf(e.horizont) + 1) % reihe.length];
     }
     speichere(); renderVorratListe();
   }));
+  ziel.querySelectorAll('.vi-ikon-knopf').forEach(b => b.addEventListener('click', () => {
+    bereichWahlOffen = (bereichWahlOffen === b.dataset.id) ? null : b.dataset.id;
+    renderVorratListe();
+  }));
+  ziel.querySelectorAll('[data-tu="etikett"]').forEach(b => b.addEventListener('click', () => {
+    setzeBereich(b.dataset.id, b.dataset.bereich);
+  }));
+}
+
+/* Etikett eines Vorratseintrags ändern — nur gültige Lebensbereiche */
+function setzeBereich(id, bereichId){
+  const e = deck().vorrat.find(x => x.id === id);
+  if (e && BEREICHE.some(b => b.id === bereichId)) e.bereich = bereichId;
+  bereichWahlOffen = null;
+  speichere();
+  renderVorratListe();
 }
 
 /* ============================================================
