@@ -292,11 +292,6 @@
     color:var(--neben);margin:16px 2px 2px}
   .ausguck-tag b{color:var(--messing);font-weight:800}
 
-  /* Deck-Wechsel: Tipp auf den Decknamen (Lastenheft 3) */
-  button.deckname{background:none;border:none;color:var(--creme);display:inline-flex;align-items:center;
-    justify-content:center;gap:9px;font-family:var(--serif);font-weight:700;font-size:34px;line-height:1.05;padding:0}
-  button.deckname svg{width:17px;height:17px;stroke:var(--messing-tief);fill:none;stroke-width:1.8;opacity:.9;flex:none}
-
   /* Funkverbindung zum Google-Kalender (nur Privatdeck) */
   .funkstand{margin-top:8px;font-size:13px;font-weight:500;color:var(--neben);opacity:.85;
     font-style:italic;font-family:var(--serif)}
@@ -353,7 +348,7 @@
   <section id="ansicht-bruecke">
     <header class="titelei">
       <div class="werk">Logbuch des Kapitäns</div>
-      <button class="deckname" id="deck-wechsel" title="Deck wechseln"></button>
+      <div class="deckname">Privatdeck</div>
       <div class="position" id="positionszeile"></div>
     </header>
 
@@ -485,10 +480,7 @@
     </div>
     <p class="rb-text">Der Export sichert das gesamte Privatdeck — Vorrat, Routinen, Logbuch, Termine und
       Einstellungen — in einer menschenlesbaren JSON-Datei. Aus ihr lässt sich alles vollständig wiederherstellen.</p>
-    <div id="export-knoepfe"></div>
-    <p class="rb-text" id="export-warnung" style="margin-top:10px" hidden>Achtung, Captain: Enthält eine
-      Sicherung das Arbeitsdeck, gehört die Datei in „Auf meinem iPhone“ — nicht in iCloud Drive oder
-      andere Cloud-Ordner. Dienstdaten bleiben auf dem Gerät.</p>
+    <button class="knopf knopf-breit" id="btn-export">Privatdeck sichern (JSON)</button>
     <div class="welle" style="margin-top:26px"></div>
     <p class="rb-text">Wiederherstellung: eine Exportdatei einlesen. Vor dem Import zeigt das Logbuch
       eine Zusammenfassung und fragt, ob ersetzt oder zusammengeführt werden soll.</p>
@@ -535,7 +527,7 @@
 /* ============================================================
    KONSTANTEN — Daten strikt vom Code getrennt
    ============================================================ */
-const APP_VERSION = '0.3.3';
+const APP_VERSION = '0.4.0';
 const FORMAT_NAME = 'logbuch-des-kapitaens';
 const FORMAT_VERSION = 1;                        // additiv versioniert (Exportformat, Grundsatz 4)
 const SPEICHER_SCHLUESSEL = 'logbuch-des-kapitaens';
@@ -574,7 +566,6 @@ const ICON = {
   wellen:  '<path d="M3 17c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 6 0M3 12c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 6 0"/>',
   flagge:  '<path d="M6 21V4m0 1h11l-3 3.5 3 3.5H6"/>',
   fernrohr:'<path d="M4 20l3.2-3.2M6.6 17.4l2.2-2.2 3.4 3.4-2.2 2.2zM10.3 13.7l4.6-4.6 3.4 3.4-4.6 4.6zM16.4 6.1l1.1-1.1a1.7 1.7 0 0 1 2.4 2.4l-1.1 1.1z"/>',
-  wechsel: '<path d="M7 4 3.5 7.5 7 11M3.5 7.5H16M17 13l3.5 3.5L17 20M20.5 16.5H8"/>',
   netz:    '<circle cx="10" cy="10" r="6.5"/><path d="M14.8 14.8 21 21M10 3.5v13M3.5 10h13M5.4 5.4l9.2 9.2M14.6 5.4l-9.2 9.2"/>'
 };
 function icon(name){ return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (ICON[name]||ICON.anker) + '</svg>'; }
@@ -661,9 +652,7 @@ const KATALOG = {
       'Drei erfüllte Hauptmissionen in Folge — der Kurs stimmt.',
       'Die Logbucheinträge der letzten Tage können sich sehen lassen.'
     ],
-    montag: ['Die Woche gehört noch niemandem. Gute Fahrt.'],
-    freitagArbeit: ['Heute Abend wird die Wache übergeben. Bis dahin: gute Fahrt.'],
-    arbeitZusatz: ['Konzentrierter Tag voraus.', 'Die Prioritäten sind gesetzt.']
+    montag: ['Die Woche gehört noch niemandem. Gute Fahrt.']
   }
 };
 
@@ -695,7 +684,7 @@ function neueId(){
 
 /* ============================================================
    SPEICHER — LocalStorage, Struktur = Rettungsboot-Format.
-   Von Anfang an zweideckfähig: decks.arbeit bleibt in v0.1 null.
+   decks.arbeit ist seit v0.4 nur noch Formatplatzhalter und bleibt null.
    ============================================================ */
 let zustand = null;
 
@@ -736,9 +725,7 @@ function ladeZustand(){
     zustand = { formatVersion: FORMAT_VERSION, decks: { privat: leeresDeck(), arbeit: null } };
   }
   zustand.decks.privat = vervollstaendigeDeck(zustand.decks.privat);
-  if (!('arbeit' in zustand.decks)) zustand.decks.arbeit = null;
-  if (zustand.decks.arbeit) zustand.decks.arbeit = vervollstaendigeDeck(zustand.decks.arbeit);
-  if (zustand.aktivesDeck !== 'arbeit' || !zustand.decks.arbeit) zustand.aktivesDeck = 'privat';
+  if (!('arbeit' in zustand.decks)) zustand.decks.arbeit = null;   // Formatplatzhalter (Exportformat 3)
 }
 
 /* Additive Migration: fehlende Felder mit Vorgaben füllen, nie umbenennen, nie löschen. */
@@ -761,19 +748,7 @@ function speichere(){
   try { localStorage.setItem(SPEICHER_SCHLUESSEL, JSON.stringify(zustand)); }
   catch(e){ console.error('Speichern fehlgeschlagen:', e); }
 }
-function aktivesDeck(){ return zustand.aktivesDeck || 'privat'; }
-function deck(){ return zustand.decks[aktivesDeck()] || zustand.decks.privat; }
-function wechsleDeck(){
-  const ziel = (aktivesDeck() === 'privat') ? 'arbeit' : 'privat';
-  if (ziel === 'arbeit' && !zustand.decks.arbeit){
-    zustand.decks.arbeit = leeresDeck('Arbeit');   // erster Wechsel: das Arbeitsdeck wird bezogen
-  }
-  zustand.aktivesDeck = ziel;
-  kr = null;                                       // ein offenes Ritual gilt nur auf seinem Deck
-  speichere();
-  tagesabgleich();
-  zeigeAnsicht('bruecke');
-}
+function deck(){ return zustand.decks.privat; }
 
 /* ============================================================
    KALENDERQUELLE — austauschbares Modul mit fester Schnittstelle.
@@ -827,13 +802,13 @@ function aktualisiereKalender(erzwingen){
       d.terminCache.stand = isoMitZone();
       d.terminCache.gestoert = false;
       speichere();
-      if (aktivesDeck() === 'privat' && !el('ansicht-bruecke').hidden){ renderTermineBereich(); renderAusguck(); }
+      if (!el('ansicht-bruecke').hidden){ renderTermineBereich(); renderAusguck(); }
       return true;
     })
     .catch(() => {
       d.terminCache.gestoert = true;
       speichere();
-      if (aktivesDeck() === 'privat' && !el('ansicht-bruecke').hidden) renderTermineBereich();
+      if (!el('ansicht-bruecke').hidden) renderTermineBereich();
       return false;
     });
 }
@@ -987,8 +962,7 @@ function baueBriefing(){
   let anrede;
   if (wt === 0)      anrede = waehleVariante('b1.montag',     KATALOG.begruessung.montag);
   else if (wt === 4) anrede = waehleVariante('b1.freitag',    KATALOG.begruessung.freitag);
-  else if (wt >= 5 && aktivesDeck() === 'privat')
-                     anrede = waehleVariante('b1.wochenende', KATALOG.begruessung.wochenende);
+  else if (wt >= 5)  anrede = waehleVariante('b1.wochenende', KATALOG.begruessung.wochenende);
   else               anrede = waehleVariante('b1.standard',   KATALOG.begruessung.standard);
 
   // Optionaler Zusatz nach erfülltem Ritual am Vorabend, max. 1× pro Woche
@@ -1040,7 +1014,7 @@ function baueBriefing(){
 
   // Baustein 5 — Abschluss (Sonntag: Wochenbilanz — Entscheidung Punkt 1; eine Null wird nie vorgelesen)
   let abschluss = null;
-  if (wt === 6 && aktivesDeck() === 'privat'){   // Wochenbilanz nur Privatdeck
+  if (wt === 6){
     const n = erfuellteDieseWoche();
     if (n > 0){
       const bw = n >= 6 ? 'ausgezeichneter Kurs, Captain.'
@@ -1051,14 +1025,7 @@ function baueBriefing(){
   }
   if (!abschluss && serieVonDrei()) abschluss = waehleVariante('b5.serie', KATALOG.abschluss.serie);
   if (!abschluss && wt === 0)       abschluss = KATALOG.abschluss.montag[0];
-  if (!abschluss && wt === 4 && aktivesDeck() === 'arbeit')
-                                    abschluss = KATALOG.abschluss.freitagArbeit[0];
-  if (!abschluss){
-    const pool = (aktivesDeck() === 'arbeit')
-      ? KATALOG.abschluss.standard.concat(KATALOG.abschluss.arbeitZusatz)   // nüchterner Ton (Katalog §8)
-      : KATALOG.abschluss.standard;
-    abschluss = waehleVariante('b5.standard', pool);
-  }
+  if (!abschluss)                   abschluss = waehleVariante('b5.standard', KATALOG.abschluss.standard);
   saetze.push(abschluss);
 
   const ergebnis = { datum: heute, anrede, text: saetze.join(' ') };
@@ -1112,8 +1079,6 @@ function toggleRoutine(id){
 const el = id => document.getElementById(id);
 
 function renderBruecke(){
-  el('deck-wechsel').innerHTML = (aktivesDeck() === 'arbeit' ? 'Arbeitsdeck' : 'Privatdeck') +
-    ' <svg viewBox="0 0 24 24" aria-hidden="true">' + ICON.wechsel + '</svg>';
   el('positionszeile').innerHTML = deutschesDatum(heuteISO()) + ' · <b>' + POSITION_KOORDINATEN + '</b>';
   const briefing = baueBriefing();
   el('briefing-anrede').textContent = briefing.anrede;
@@ -1243,7 +1208,7 @@ function renderHauptmission(){
 
   if (k && k.fuerDatum > heute){
     const wann = (k.fuerDatum === morgen) ? 'morgen' : TAGE_LANG[wochentagIndex(k.fuerDatum)];
-    const gruss = (aktivesDeck() === 'arbeit') ? 'Feierabend, Captain.' : 'Gute Nacht, Captain.';
+    const gruss = 'Gute Nacht, Captain.';
     ziel.innerHTML =
       '<div class="hauptmission"><div class="hm-label">' + icon('stern') + '<span>Hauptmission</span></div>' +
       '<div class="hm-titel">' + entk(k.hauptmission.titel) + '</div>' +
@@ -1287,6 +1252,25 @@ function renderHauptmission(){
 /* --- Begleitmissionen --- */
 function renderBegleitmissionen(){
   const ziel = el('bm-bereich');
+  const heute = heuteISO();
+  const voraus = deck().kurs && deck().kurs.fuerDatum > heute ? deck().kurs : null;
+
+  // Kurs für einen kommenden Tag: die gewählten Begleitmissionen als stille Vorschau,
+  // ohne Haken — abhakbar werden sie erst an ihrem Tag (Fundstück des Captains, v0.4)
+  if (voraus && voraus.begleitmissionen.length){
+    const wann = (voraus.fuerDatum === addTage(heute, 1)) ? 'morgen' : TAGE_LANG[wochentagIndex(voraus.fuerDatum)];
+    ziel.innerHTML =
+      '<div class="titelzeile">' + icon('anker') + '<h2>Begleitmissionen · ' + wann + '</h2><div class="linie"></div></div>' +
+      voraus.begleitmissionen.map(b =>
+        '<div class="karte">' +
+          '<div class="ikon">' + icon(bereichVon(b.bereich).ikon) + '</div>' +
+          '<div class="text"><div class="m-titel">' + entk(b.titel) + '</div>' +
+            '<div class="m-schritt">' + (b.naechsterSchritt ? 'Nächster Schritt: ' + entk(b.naechsterSchritt)
+                                                            : bereichVon(b.bereich).name) + '</div></div>' +
+        '</div>').join('');
+    return;
+  }
+
   const k = kursFuerHeute();
   if (!k || !k.begleitmissionen.length){ ziel.innerHTML = ''; return; }
 
@@ -1347,7 +1331,6 @@ function renderTermineBereich(){
 
 /* Stille Standangabe der Funkverbindung unter den heutigen Terminen */
 function funkstandZeile(){
-  if (aktivesDeck() !== 'privat') return '';
   const d = deck();
   if (d.settings.kalender.typ !== 'google-apps-script') return '';
   const tc = d.terminCache;
@@ -1411,12 +1394,16 @@ function entk(s){
    ============================================================ */
 let kr = null;   // flüchtiger Ritualzustand — nichts davon wird gespeichert
 
-/* Das Ritual plant den nächsten Tag — auf dem Arbeitsdeck freitags gleich den Montag:
-   der Montagmorgen steht am Freitag, das Wochenende bleibt arbeitsfrei im Kopf (Lastenheft 4). */
+/* Das Ritual plant den kommenden Tag. Mitternachts-Regel: Wer nach 0 Uhr noch
+   sein Abendritual fährt (0–4 Uhr), meint mit „morgen“ den Tag, der kalendarisch
+   schon begonnen hat — sonst läge der Kurs einen Tag zu weit voraus und die
+   Missionen blieben den ganzen Folgetag unsichtbar. */
+function ritualZielFuer(heuteIso, stunde){
+  if (stunde < 4) return heuteIso;               // Nachtstunden gehören noch zum Vorabend
+  return addTage(heuteIso, 1);
+}
 function ritualZielDatum(){
-  const wt = wochentagIndex(heuteISO());
-  if (aktivesDeck() === 'arbeit' && wt >= 4) return addTage(heuteISO(), 7 - wt);
-  return addTage(heuteISO(), 1);
+  return ritualZielFuer(heuteISO(), new Date().getHours());
 }
 
 function oeffneKartenraum(){
@@ -1441,7 +1428,7 @@ function renderSchritt1(){
   const k = deck().kurs, heute = heuteISO();
 
   // Fall A: Kurs für morgen steht bereits (Ritual wird wiederholt)
-  if (k && k.fuerDatum > heute){
+  if (k && k.fuerDatum >= kr.zielDatum){
     ziel.innerHTML =
       '<div class="kr-frage">Rückblick</div>' +
       '<div class="kr-hinweis">Der Kurs für ' + TAGE_LANG[wochentagIndex(k.fuerDatum)] + ' ist bereits gesetzt: „' + entk(k.hauptmission.titel) + '“.<br>' +
@@ -1528,7 +1515,7 @@ renderSchritt1 = function(){
 /* Rückblick festschreiben: Logbucheintrag, Unerfülltes zurück in den Vorrat, Kurs schließen */
 function commitRueckblick(){
   const d = deck(), k = d.kurs;
-  if (!k || k.fuerDatum > heuteISO() || !kr.rb) return;
+  if (!k || k.fuerDatum >= kr.zielDatum || !kr.rb) return;
 
   const eintrag = {
     datum: k.fuerDatum,
@@ -1736,8 +1723,6 @@ const NETZ_KENNUNG = 'LOGBUCH-NETZ';
 
 function normalisiereFang(s){ return String(s).replace(/\s+/g, ' ').trim().toLowerCase(); }
 
-function deckLabel(name){ return name === 'arbeit' ? 'Arbeitsdeck' : 'Privatdeck'; }
-
 function netzEinholen(){
   const st = el('netz-status');
   st.classList.remove('warnung');
@@ -1754,26 +1739,26 @@ function netzEinholen(){
       st.textContent = 'Das sieht nicht nach einem Netz aus — erst in Kurzbefehle „Netz auswerfen“.';
       return;
     }
-    // Ziel-Deck aus der Kennzeile: PRIVAT / ARBEIT — ohne Zusatz zielt das Netz aufs aktive Deck
-    let deckName = aktivesDeck();
-    if (kopf[1] === 'PRIVAT')      deckName = 'privat';
-    else if (kopf[1] === 'ARBEIT') deckName = 'arbeit';
-    else if (kopf[1]){
+    // Kennzeilen: LOGBUCH-NETZ und LOGBUCH-NETZ PRIVAT sind gültig.
+    // Ein ARBEIT-Netz wird bewusst abgewiesen statt still privat einsortiert (v0.4: kein Arbeitsdeck mehr).
+    if (kopf[1] === 'ARBEIT'){
       st.classList.add('warnung');
-      st.textContent = 'Unbekanntes Ziel-Deck in der Kennzeile: „' + entk(kopf[1]) + '“.';
+      st.textContent = 'Das Arbeitsdeck gibt es nicht mehr an Bord — dieses Netz gehört in dein Arbeits-Dashboard.';
       return;
     }
-    if (deckName === 'arbeit' && !zustand.decks.arbeit){
-      zustand.decks.arbeit = leeresDeck('Arbeit');   // das erste Arbeits-Netz bezieht das Deck
+    if (kopf[1] && kopf[1] !== 'PRIVAT'){
+      st.classList.add('warnung');
+      st.textContent = 'Unbekanntes Ziel in der Kennzeile: „' + entk(kopf[1]) + '“.';
+      return;
     }
-    const ziel = zustand.decks[deckName];
+    const ziel = deck();
     // Netzinhalt, innerhalb des Netzes selbst entdoppelt
     const gesehen = new Set(), netz = [];
     for (const f of zeilen.slice(1)){
       const n = normalisiereFang(f);
       if (!gesehen.has(n)){ gesehen.add(n); netz.push(f); }
     }
-    // Gedächtnis und Dublettenschutz arbeiten stets im Ziel-Deck
+    // Gedächtnis und Dublettenschutz des Privatdecks
     const gedaechtnis = new Set(ziel.netzGedaechtnis.map(normalisiereFang));
     const imVorrat = new Set(ziel.vorrat.map(e => normalisiereFang(e.titel)));
     const neue = netz.filter(f => {
@@ -1781,14 +1766,12 @@ function netzEinholen(){
       return !gedaechtnis.has(n) && !imVorrat.has(n);
     });
     if (!kr) kr = {};
-    kr.netz = { alle: netz, neue, deckName };
+    kr.netz = { alle: netz, neue };
     if (!neue.length){
       ziel.netzGedaechtnis = netz.slice();       // stilles Reinigen: Abgehaktes verliert den Merker
       speichere();
       el('netz-vorschau').hidden = true;
-      st.textContent = netz.length
-        ? 'Netz eingeholt (' + deckLabel(deckName) + ') — nichts Neues darin.'
-        : 'Das Netz war leer.';
+      st.textContent = netz.length ? 'Netz eingeholt — nichts Neues darin.' : 'Das Netz war leer.';
       return;
     }
     st.textContent = '';
@@ -1804,7 +1787,7 @@ function renderNetzVorschau(){
   const n = kr.netz;
   feld.innerHTML =
     '<p>Im Netz: ' + n.alle.length + (n.alle.length === 1 ? ' Fang' : ' Fänge') +
-      ' für das <b>' + deckLabel(n.deckName) + '</b>, davon <b>' + n.neue.length + ' neu</b>:</p>' +
+      ', davon <b>' + n.neue.length + ' neu</b>:</p>' +
     '<div class="netz-liste">' + n.neue.map(f =>
       '<div class="netz-fang"><svg viewBox="0 0 24 24">' + ICON.netz + '</svg>' + entk(f) + '</div>').join('') + '</div>' +
     '<div class="aktionspaar">' +
@@ -1819,19 +1802,16 @@ function renderNetzVorschau(){
 function netzUebernehmen(){
   const n = kr && kr.netz;
   if (!n) return;
-  const ziel = zustand.decks[n.deckName];
-  if (!ziel) return;
   for (const f of n.neue){
-    ziel.vorrat.push({ id: neueId(), titel: f, bereich: 'allgemein',
-                       horizont: 'woche', erstelltAm: isoMitZone() });
+    deck().vorrat.push({ id: neueId(), titel: f, bereich: 'allgemein',
+                         horizont: 'woche', erstelltAm: isoMitZone() });
   }
-  ziel.netzGedaechtnis = n.alle.slice();         // Gedächtnis = übernommener Netzinhalt
+  deck().netzGedaechtnis = n.alle.slice();       // Gedächtnis = übernommener Netzinhalt
   kr.netz = null;
   speichere();
   el('netz-vorschau').hidden = true;
-  el('netz-status').textContent = n.neue.length + (n.neue.length === 1 ? ' Fang' : ' Fänge') +
-    ' für das ' + deckLabel(n.deckName) + ' an Bord.';
-  if (n.deckName === aktivesDeck()) renderVorratListe();
+  el('netz-status').textContent = n.neue.length + (n.neue.length === 1 ? ' Fang' : ' Fänge') + ' an Bord.';
+  renderVorratListe();
 }
 
 function netzVerwerfen(){                        // Gedächtnis bleibt unangetastet — nichts geht verloren
@@ -1843,8 +1823,8 @@ function netzVerwerfen(){                        // Gedächtnis bleibt unangetas
 /* --- Schritt 3a: erst nur EINE Frage — die Hauptmission --- */
 function betreteSchritt3a(){
   const d = deck();
-  // Eine bereits getroffene Morgen-Wahl kehrt in den Vorrat zurück, bevor neu gewählt wird
-  if (d.kurs && d.kurs.fuerDatum > heuteISO()){
+  // Eine bereits getroffene Wahl kehrt in den Vorrat zurück, bevor neu gewählt wird
+  if (d.kurs){
     d.vorrat.push(missionZuVorrat(d.kurs.hauptmission));
     d.kurs.begleitmissionen.forEach(b => d.vorrat.push(missionZuVorrat(b)));
     d.kurs = null;
@@ -1862,9 +1842,11 @@ function renderSchritt3a(){
   if (!kr.hauptWahl){
     const vorrat = deck().vorrat.slice()
       .sort((a, b) => (a.faelligAm || '9999').localeCompare(b.faelligAm || '9999'));
-    const frage = (kr.zielDatum === addTage(heuteISO(), 1))
-      ? 'Was macht morgen zum Erfolg?'
-      : 'Was macht den ' + zielTag + ' zum Erfolg?';
+    const frage = (kr.zielDatum === heuteISO())
+      ? 'Was macht den heutigen Tag zum Erfolg?'
+      : (kr.zielDatum === addTage(heuteISO(), 1))
+        ? 'Was macht morgen zum Erfolg?'
+        : 'Was macht den ' + zielTag + ' zum Erfolg?';
     ziel.innerHTML =
       '<div class="kr-frage">' + frage + '</div>' +
       '<div class="kr-hinweis">Ein Eintrag wird zur Hauptmission für ' + zielTag + '.</div>' +
@@ -1982,12 +1964,9 @@ function setzeKurs(){
 /* --- Abschluss: ruhiger Bestätigungsbildschirm; freitags das Rettungsboot --- */
 function renderAbschluss(){
   const ziel = el('kr-abschluss');
-  const freitag = wochentagIndex(heuteISO()) === 4 && aktivesDeck() === 'privat';
-  const titelText = (aktivesDeck() === 'arbeit')
-    ? 'Wache übergeben. Feierabend, Captain.'
-    : 'Kurs gesetzt, Captain.';
+  const freitag = wochentagIndex(heuteISO()) === 4;
   ziel.innerHTML =
-    '<div class="kr-frage" style="margin-top:24px">' + titelText + '</div>' +
+    '<div class="kr-frage" style="margin-top:24px">Kurs gesetzt, Captain.</div>' +
     '<div class="kr-hinweis">Hauptmission für ' + TAGE_LANG[wochentagIndex(kr.zielDatum)] + ':<br>„' +
       entk(deck().kurs.hauptmission.titel) + '“</div>' +
     (freitag
@@ -2114,7 +2093,6 @@ function oeffneTermine(){
 /* Funkverbindung einrichten — nur auf dem Privatdeck (Dienstdaten bleiben auf dem Gerät) */
 function renderFunkBlock(){
   const block = el('funk-block');
-  if (aktivesDeck() !== 'privat'){ block.hidden = true; return; }
   block.hidden = false;
   const kal = deck().settings.kalender;
   el('funk-url').value = kal.scriptUrl || '';
@@ -2195,7 +2173,7 @@ function renderTermineListe(){
   const heute = heuteISO();
   const d = deck();
   const eigene = d.termine.filter(t => t.datum >= heute).map(t => Object.assign({ eigen: true }, t));
-  const funk = (aktivesDeck() === 'privat' && d.settings.kalender.typ === 'google-apps-script')
+  const funk = (d.settings.kalender.typ === 'google-apps-script')
     ? d.terminCache.termine.filter(t => t.datum >= heute)
     : [];
   const kommende = eigene.concat(funk)
@@ -2233,47 +2211,22 @@ function deckExport(d){
   };
 }
 
-function exportiere(auswahl){
-  auswahl = auswahl || 'privat';
-  const mitPrivat = (auswahl !== 'arbeit');
-  const mitArbeit = (auswahl !== 'privat') && !!zustand.decks.arbeit;
+function exportiere(){
   const daten = {
     format: FORMAT_NAME,
     formatVersion: FORMAT_VERSION,
     exportedAt: isoMitZone(),
     appVersion: APP_VERSION,
-    decks: {
-      privat: mitPrivat ? deckExport(zustand.decks.privat) : null,
-      arbeit: mitArbeit ? deckExport(zustand.decks.arbeit) : null
-    }
+    decks: { privat: deckExport(zustand.decks.privat), arbeit: null }
   };
-  const namensteil = (mitPrivat && mitArbeit) ? '' : (mitArbeit ? '_arbeit' : '_privat');
   const blob = new Blob([JSON.stringify(daten, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'logbuch_export' + namensteil + '_' + heuteISO() + '.json';
+  a.download = 'logbuch_export_privat_' + heuteISO() + '.json';
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-}
-
-/* Sicherungsknöpfe: erst mit bezogenem Arbeitsdeck erscheinen die drei Optionen */
-function renderRettungsboot(){
-  const feld = el('export-knoepfe');
-  const arbeitDa = !!zustand.decks.arbeit;
-  feld.innerHTML = arbeitDa
-    ? '<button class="knopf knopf-breit" data-auswahl="beide">Beide Decks sichern (JSON)</button>' +
-      '<button class="knopf-linie knopf-breit" data-auswahl="privat">Nur Privatdeck</button>' +
-      '<button class="knopf-linie knopf-breit" data-auswahl="arbeit">Nur Arbeitsdeck</button>'
-    : '<button class="knopf knopf-breit" data-auswahl="privat">Privatdeck sichern (JSON)</button>';
-  el('export-warnung').hidden = !arbeitDa;
-  feld.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-    exportiere(b.dataset.auswahl);
-    const st = el('rb-status');
-    st.classList.remove('warnung');
-    st.textContent = 'Logbuch gesichert.';
-  }));
 }
 
 let importDaten = null;
@@ -2285,27 +2238,23 @@ function leseImportDatei(datei){
   leser.onload = () => {
     try {
       const d = JSON.parse(leser.result);
-      if (d.format !== FORMAT_NAME || !d.decks || (!d.decks.privat && !d.decks.arbeit)){
-        throw new Error('Kein Logbuch-Export.');
+      if (d.format !== FORMAT_NAME || !d.decks || !d.decks.privat){
+        throw new Error('Kein Logbuch-Export mit Privatdeck.');
       }
       if ((d.formatVersion || 1) > FORMAT_VERSION){
         throw new Error('Die Datei stammt aus einer neueren App-Version.');
       }
       importDaten = d;
-      const zeilen = [];
-      for (const name of ['privat', 'arbeit']){
-        const p = d.decks[name];
-        if (!p) continue;
-        const logbuchInfo = (p.logbuch && p.logbuch.length)
-          ? 'Logbuch seit ' + kurzDatum(p.logbuch.slice().sort((a, b) => a.datum.localeCompare(b.datum))[0].datum)
-          : 'Logbuch leer';
-        zeilen.push((name === 'privat' ? 'Privatdeck' : 'Arbeitsdeck') + ': ' +
-          (p.vorrat || []).length + ' Vorratseinträge, ' + (p.routinen || []).length + ' Routinen, ' +
-          (p.termine || []).length + ' Termine, ' + logbuchInfo + '.');
-      }
-      el('import-zusammenfassung').textContent = zeilen.join(' ') +
-        ' (Exportiert ' + (d.exportedAt || '').slice(0, 10) + '.) Ersetzen überschreibt die enthaltenen Decks ' +
-        'vollständig; Zusammenführen ergänzt und aktualisiert anhand der IDs. Nicht enthaltene Decks bleiben unberührt.';
+      const p = d.decks.privat;
+      const logbuchInfo = (p.logbuch && p.logbuch.length)
+        ? 'Logbuch seit ' + kurzDatum(p.logbuch.slice().sort((a, b) => a.datum.localeCompare(b.datum))[0].datum)
+        : 'Logbuch leer';
+      el('import-zusammenfassung').textContent =
+        'Privatdeck: ' + (p.vorrat || []).length + ' Vorratseinträge, ' +
+        (p.routinen || []).length + ' Routinen, ' + (p.termine || []).length + ' Termine, ' + logbuchInfo +
+        ' (exportiert ' + (d.exportedAt || '').slice(0, 10) + ').' +
+        (d.decks.arbeit ? ' Das in der Datei enthaltene Arbeitsdeck wird übergangen.' : '') +
+        ' Ersetzen überschreibt das Privatdeck vollständig; Zusammenführen ergänzt und aktualisiert anhand der IDs.';
       el('import-overlay').hidden = false;
     } catch(e){
       status.classList.add('warnung');
@@ -2320,36 +2269,29 @@ function leseImportDatei(datei){
 }
 
 function importErsetzen(){
-  for (const name of ['privat', 'arbeit']){
-    if (!importDaten.decks[name]) continue;             // Teilimport: fehlendes Deck bleibt unberührt
-    zustand.decks[name] = vervollstaendigeDeck(importDaten.decks[name]);
-    zustand.decks[name].briefingStatus.heutigesBriefing = null;
-  }
+  zustand.decks.privat = vervollstaendigeDeck(importDaten.decks.privat);
+  zustand.decks.privat.briefingStatus.heutigesBriefing = null;
   importAbschliessen('Wiederhergestellt. Willkommen zurück, Captain.');
 }
 
 function importMergen(){
-  for (const name of ['privat', 'arbeit']){
-    if (!importDaten.decks[name]) continue;
-    const quelle = vervollstaendigeDeck(importDaten.decks[name]);
-    if (!zustand.decks[name]){ zustand.decks[name] = quelle; continue; }
-    const ziel = zustand.decks[name];
-    const nachId = (zielListe, quellListe) => {
-      for (const q of quellListe){
-        const i = zielListe.findIndex(z => z.id === q.id);
-        if (i >= 0) zielListe[i] = q; else zielListe.push(q);   // bekannte ID ersetzt, nie dupliziert
-      }
-    };
-    nachId(ziel.vorrat, quelle.vorrat);
-    nachId(ziel.routinen, quelle.routinen);
-    nachId(ziel.termine, quelle.termine);
-    for (const q of quelle.logbuch){                             // Logbuch: Datum ersetzt Datum
-      ziel.logbuch = ziel.logbuch.filter(e => e.datum !== q.datum);
-      ziel.logbuch.push(q);
+  const quelle = vervollstaendigeDeck(importDaten.decks.privat);
+  const ziel = zustand.decks.privat;
+  const nachId = (zielListe, quellListe) => {
+    for (const q of quellListe){
+      const i = zielListe.findIndex(z => z.id === q.id);
+      if (i >= 0) zielListe[i] = q; else zielListe.push(q);     // bekannte ID ersetzt, nie dupliziert
     }
-    ziel.logbuch.sort((a, b) => a.datum.localeCompare(b.datum));
-    if (!ziel.kurs && quelle.kurs && quelle.kurs.fuerDatum >= heuteISO()) ziel.kurs = quelle.kurs;
+  };
+  nachId(ziel.vorrat, quelle.vorrat);
+  nachId(ziel.routinen, quelle.routinen);
+  nachId(ziel.termine, quelle.termine);
+  for (const q of quelle.logbuch){                               // Logbuch: Datum ersetzt Datum
+    ziel.logbuch = ziel.logbuch.filter(e => e.datum !== q.datum);
+    ziel.logbuch.push(q);
   }
+  ziel.logbuch.sort((a, b) => a.datum.localeCompare(b.datum));
+  if (!ziel.kurs && quelle.kurs && quelle.kurs.fuerDatum >= heuteISO()) ziel.kurs = quelle.kurs;
   importAbschliessen('Zusammengeführt. Alles an Bord, Captain.');
 }
 
@@ -2359,7 +2301,6 @@ function importAbschliessen(meldung){
   el('import-datei').value = '';
   speichere();
   tagesabgleich();
-  renderRettungsboot();
   const status = el('rb-status');
   status.classList.remove('warnung');
   status.textContent = meldung;
@@ -2374,15 +2315,11 @@ function zeigeAnsicht(name){
   });
   window.scrollTo(0, 0);
   if (name === 'bruecke'){ renderBruecke(); aktualisiereKalender(false); }
-  if (name === 'rettungsboot') renderRettungsboot();
 }
 
 /* Horizonte datierter Einträge wandern automatisch mit dem Kalender (Lastenheft 6) */
 function tagesabgleich(){
-  for (const name of ['privat', 'arbeit']){
-    const d = zustand.decks[name];
-    if (d) d.vorrat.forEach(e => { if (e.faelligAm) e.horizont = horizontFuerDatum(e.faelligAm); });
-  }
+  deck().vorrat.forEach(e => { if (e.faelligAm) e.horizont = horizontFuerDatum(e.faelligAm); });
   speichere();
 }
 
@@ -2423,9 +2360,14 @@ function verdrahte(){
   el('termin-eingabe').addEventListener('keydown', ev => { if (ev.key === 'Enter') terminSpeichern(); });
   el('btn-termin-speichern').addEventListener('click', terminSpeichern);
 
-  el('deck-wechsel').addEventListener('click', wechsleDeck);
   el('btn-funk-verbinden').addEventListener('click', funkVerbinden);
   el('btn-funk-trennen').addEventListener('click', funkTrennen);
+  el('btn-export').addEventListener('click', () => {
+    exportiere();
+    const st = el('rb-status');
+    st.classList.remove('warnung');
+    st.textContent = 'Logbuch gesichert: logbuch_export_privat_' + heuteISO() + '.json';
+  });
   el('btn-import').addEventListener('click', () => el('import-datei').click());
   el('import-datei').addEventListener('change', ev => {
     if (ev.target.files && ev.target.files[0]) leseImportDatei(ev.target.files[0]);
